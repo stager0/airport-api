@@ -1,3 +1,278 @@
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-# Create your models here.
+class AirplaneType(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Airplane(models.Model):
+    name = models.CharField(max_length=255)
+    rows = models.IntegerField(validators=[MaxValueValidator(200)])
+    letters_in_row = models.CharField(max_length=15)
+    airplane_type = models.ForeignKey(
+        AirplaneType,
+        on_delete=models.SET_NULL,
+        related_name="airplanes",
+        null=True
+    )
+
+    @property
+    def capacity(self) -> int:
+        return len(self.letters_in_row) * self.rows
+
+    @property
+    def list_of_seats(self):
+        return [i for i in self.letters_in_row]
+
+    def __str__(self):
+        return self.name
+
+
+class Airport(models.Model):
+    name = models.CharField(max_length=255)
+    closest_big_city = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.closest_big_city})"
+
+
+class Route(models.Model):
+    source = models.ForeignKey(
+        Airport,
+        on_delete=models.CASCADE,
+        related_name="departures"
+    )
+    destination = models.ForeignKey(
+        Airport,
+        on_delete=models.CASCADE,
+        related_name="arrivals"
+    )
+    distance = models.IntegerField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Source: {self.source} ---> Destination: {self.destination}"
+
+
+class Crew(models.Model):
+    POSITIONS_CHOICES = [
+        ("CAPTAIN", "Captain"),
+        ("FIRST_OFFICER", "First Officer"),
+        ("LEAD_FLIGHT_ATTENDANT", "Lead Flight Attendant"),
+        ("FLIGHT_ATTENDANT", "Flight Attendant")
+    ]
+    first_name = models.CharField(max_length=125)
+    last_name = models.CharField(max_length=125)
+    position = models.CharField(max_length=50, choices=POSITIONS_CHOICES)
+
+    def __str__(self):
+        return (
+            f"{self.first_name}, "
+            f"{self.last_name}, "
+            f"Position: {self.position}"
+        )
+
+    @property
+    def full_name_and_position(self):
+        return self.first_name + " " + self.last_name + " Position: " + self.position
+
+class Flight(models.Model):
+    route = models.ForeignKey(
+        Route,
+        on_delete=models.CASCADE,
+        related_name="flights"
+    )
+    airplane = models.ForeignKey(
+        Airplane,
+        on_delete=models.SET_NULL,
+        related_name="flights",
+        null=True
+    )
+    departure_time = models.DateTimeField(blank=True, null=True)
+    arrival_time = models.DateTimeField(blank=True, null=True)
+    crew = models.ManyToManyField(
+        Crew,
+        related_name="flights"
+    )
+
+    class Meta:
+        ordering = ["-departure_time"]
+
+    def __str__(self):
+        return self.route
+
+
+class Order(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="orders"
+    )
+    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.created_at
+
+
+class SnacksAndFood(models.Model):
+    SNACKS_AND_DRINKS_CHOICES = {
+        "COLA": ("Coca-Cola 0.5", 2.00),
+        "FANTA": ("Fanta 0.5", 2.00),
+        "JUICE": ("Juice 0.5", 2.50),
+        "COFFEE": ("Cup of coffee (caramel-latte) 0.33", 3.00),
+        "REDBULL": ("Red-Bull 0.25", 3.50),
+        "WATER": ("Water(PET), 0.5", 1.50),
+        "CHIPS": ("Chips (cheese), 300g", 2.20),
+        "BOUNTY": ("Bounty (big-pack) 200g", 2.50),
+        "MARS": ("Mars (big-pack) 200 g", 2.50),
+        "SNICKERS": ("Snickers (big-pack) 200g", 2.50),
+        "CRACKERS": ("TUC Sour Cream & Onion 3 * 100g", 3.00),
+        "PRINGLES": ("Pringles cheese 200g", 3.50),
+        "SALADE": ("Bio-Salade 'Cesar'", 4.00),
+        "NONE": ("No Snacks and Drinks", 0.00),
+    }
+    name = models.CharField(
+        max_length=100,
+        choices=[(k, v[0]) for k, v in SNACKS_AND_DRINKS_CHOICES.items()],
+        default="NONE")
+    price = models.DecimalField(max_digits=8, decimal_places=2, editable=False)
+
+    def save(self, *args, **kwargs):
+        self.price = self.SNACKS_AND_DRINKS_CHOICES[self.name][1]
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.get_name_display()
+
+
+class MealOption(models.Model):
+    MEAL_TYPE_CHOICES = [
+        ("STANDARD", "Standard"),
+        ("VEGETARIAN", "Vegetarian"),
+        ("CHILD", "Children's Portion"),
+        ("NONE", "No Meal")
+    ]
+    name = models.CharField(max_length=255, unique=True)
+    meal_type = models.CharField(
+        max_length=30,
+        choices=MEAL_TYPE_CHOICES,
+        default="NONE"
+    )
+    weight = models.IntegerField(blank=True, null=True)
+    price = models.DecimalField(max_digits=6, decimal_places=2)
+
+    def __str__(self):
+        return self.get_name_display()
+
+
+class ExtraEntertainmentAndComfort(models.Model):
+    EXTRA_CHOICES = {
+        "TABLET": ("Tablet with movies/games", 9.99),
+        "WIRELESS_HEADPHONES": ("Wireless headphones", 7.49),
+        "PILLOW_AND_BLANKET": ("Pillow and blanket", 5.00),
+        "SLEEP_MASK_AND_EARPLUGS": ("Sleep mask and earplugs", 3.50),
+        "WIFI": ("In-flight WI-FI access", 12.00),
+        "NONE": ("No Extra", 0.00),
+    }
+    name = models.CharField(
+        max_length= 55,
+        choices=[(k, v[0]) for k, v in EXTRA_CHOICES.items()],
+        default="NONE",
+        editable=False
+    )
+    price = models.DecimalField(max_digits=8, decimal_places=2)
+
+    def save(self, *args, **kwargs):
+        self.price = self.EXTRA_CHOICES[self.name][1]
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.get_name_display()
+
+
+class Ticket(models.Model):
+    row = models.IntegerField()
+    letter = models.CharField(max_length=1)
+    discount = models.IntegerField(
+        default=0,
+        blank=True,
+        null=True,
+        validators=[
+            MaxValueValidator(100),
+            MinValueValidator(0)
+        ]
+    )
+    has_luggage = models.BooleanField(blank=True, default=False)
+    flight = models.ForeignKey(
+        Flight,
+        on_delete=models.SET_NULL,
+        related_name="tickets",
+        null=True
+    )
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="tickets"
+    )
+    price = models.DecimalField(max_digits=8, decimal_places=2)
+    meal_option = models.ForeignKey(
+        MealOption,
+        on_delete=models.SET_NULL,
+        related_name="tickets",
+        null=True,
+        blank=True
+    )
+    extra_entertainment_and_comfort = models.ManyToManyField(
+        ExtraEntertainmentAndComfort,
+        related_name="tickets",
+        blank=True
+    )
+    snacks_and_food = models.ManyToManyField(
+        SnacksAndFood,
+        related_name="tickets",
+        blank=True
+    )
+
+    @staticmethod
+    def validate_ticket(row, letter, airplane, error_to_raise):
+        if not (1 <= row <= airplane.rows):
+            raise error_to_raise(
+                {f"The row must be in range: 1 - {airplane.rows}"}
+            )
+        if letter not in airplane.list_of_seats:
+            raise error_to_raise(
+                {f"The seat must be in range {airplane.list_of_seats}"}
+            )
+
+    def clean(self):
+        Ticket.validate_ticket(
+            row=self.row,
+            letter=self.letter,
+            airplane=self.flight.airplane,
+            error_to_raise=ValidationError
+        )
+
+    def save(
+        self,
+        force_insert = False,
+        force_update = False,
+        using = None,
+        update_fields = None,
+    ):
+        self.full_clean()
+        return super(Ticket, self).save(force_insert, force_update, using, update_fields)
+
+    def __str__(self):
+        return f"{self.flight}, row: {self.row}, seat: {self.letter}"
+
+    class Meta:
+        ordering = ["row", "letter"]
+        unique_together = ("flight", "letter", "row")
