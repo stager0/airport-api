@@ -1,2 +1,82 @@
-venv
-.idea
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.log
+
+# Virtualenv
+env/
+venv/
+ENV/
+.venv/
+.env/
+.env
+
+# Django
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+static/
+
+# Migrations
+*/migrations/__pycache__/
+*/migrations/*.pyc
+*/migrations/*.pyo
+
+# Byte-compiled / optimized / DLL files
+*.pyd
+*.dll
+*.obj
+*.o
+*.a
+*.lib
+
+# Secrets ( .env)
+.env.*
+!.env.example
+
+# IDE / Editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+*.pid
+*.pid.lock
+
+# MyPy, Pyright, etc.
+.mypy_cache/
+.pyright/
+.pytest_cache/
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+
+# Test output
+nosetests.xml
+coverage.xml
+*.cover
+*.pyc
+
+# Pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Jupyter / IPython
+.ipynb_checkpoints/
+
+# Swagger / OpenAPI if generated
+swagger.json
+swagger.yaml
