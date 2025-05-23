@@ -108,6 +108,7 @@ class FlightSerializer(serializers.ModelSerializer):
             "crew"
         )
 
+
 class FlightListSerializer(FlightSerializer):
     route = RouteSourceDestinationNamesSerializer(read_only=True)
     airplane = AirplaneNameSerializer(read_only=True)
@@ -121,6 +122,12 @@ class FlightListSerializer(FlightSerializer):
             "route",
             "airplane",
         )
+
+
+class FlightRetrieveSerializer(FlightSerializer):
+    crew = CrewSerializer(many=True, read_only=True)
+    route = RouteListSerializer(read_only=True)
+    airplane = AirplaneSerializer(read_only=True)
 
 
 class TicketSerializer(serializers.ModelSerializer):
