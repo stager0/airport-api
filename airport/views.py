@@ -6,7 +6,8 @@ from airport.models import (
     SnacksAndDrinks,
     ExtraEntertainmentAndComfort,
     Airport,
-    Crew
+    Crew,
+    AirplaneType
 )
 from airport.serializers import (
     MealOptionSerializer,
@@ -14,6 +15,7 @@ from airport.serializers import (
     ExtraEntertainmentAndComfortSerializer,
     AirportSerializer,
     CrewSerializer,
+    AirplaneTypeSerializer,
 )
 
 
@@ -52,3 +54,13 @@ class AirportViewSet(viewsets.ModelViewSet):
 class CrewViewSet(viewsets.ModelViewSet):
     queryset = Crew.objects.all()
     serializer_class = CrewSerializer
+
+
+class AirplaneTypeViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.DestroyModelMixin,
+    GenericViewSet
+):
+    queryset = AirplaneType.objects.all()
+    serializer_class = AirplaneTypeSerializer
