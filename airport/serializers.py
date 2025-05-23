@@ -70,6 +70,12 @@ class AirplaneSerializer(serializers.ModelSerializer):
         fields =("id", "name", "rows", "letters_in_row", "airplane_type")
 
 
+class AirplaneNameSerializer(AirplaneSerializer):
+    class Meta:
+        model = Airplane
+        fields = ("name",)
+
+
 class RouteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Route
