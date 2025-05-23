@@ -9,7 +9,8 @@ from airport.models import (
     Crew,
     AirplaneType,
     Airplane,
-    Route
+    Route,
+    Flight
 )
 from airport.serializers import (
     MealOptionSerializer,
@@ -20,6 +21,7 @@ from airport.serializers import (
     AirplaneTypeSerializer,
     AirplaneSerializer,
     RouteSerializer,
+    FlightSerializer,
 )
 
 
@@ -78,3 +80,8 @@ class AirplaneViewSet(viewsets.ModelViewSet):
 class RouteViewSet(viewsets.ModelViewSet):
     queryset = Route.objects.all()
     serializer_class = RouteSerializer
+
+
+class FlightViewSet(viewsets.ModelViewSet):
+    queryset = Flight.objects.all()
+    serializer_class = FlightSerializer
