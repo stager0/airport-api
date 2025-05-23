@@ -7,7 +7,8 @@ from airport.models import (
     ExtraEntertainmentAndComfort,
     Airport,
     Crew,
-    AirplaneType
+    AirplaneType,
+    Airplane
 )
 from airport.serializers import (
     MealOptionSerializer,
@@ -16,6 +17,7 @@ from airport.serializers import (
     AirportSerializer,
     CrewSerializer,
     AirplaneTypeSerializer,
+    AirplaneSerializer,
 )
 
 
@@ -64,3 +66,8 @@ class AirplaneTypeViewSet(
 ):
     queryset = AirplaneType.objects.all()
     serializer_class = AirplaneTypeSerializer
+
+
+class AirplaneViewSet(viewsets.ModelViewSet):
+    queryset = Airplane.objects.all()
+    serializer_class = AirplaneSerializer
