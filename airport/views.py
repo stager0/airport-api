@@ -10,7 +10,8 @@ from airport.models import (
     AirplaneType,
     Airplane,
     Route,
-    Flight
+    Flight,
+    Order
 )
 from airport.serializers import (
     MealOptionSerializer,
@@ -22,6 +23,7 @@ from airport.serializers import (
     AirplaneSerializer,
     RouteSerializer,
     FlightSerializer,
+    OrderSerializer,
 )
 
 
@@ -85,3 +87,12 @@ class RouteViewSet(viewsets.ModelViewSet):
 class FlightViewSet(viewsets.ModelViewSet):
     queryset = Flight.objects.all()
     serializer_class = FlightSerializer
+
+
+class OrderViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    GenericViewSet
+):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
