@@ -1,3 +1,4 @@
+from django.template.context_processors import request
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
@@ -25,7 +26,7 @@ from airport.serializers import (
     AirplaneSerializer,
     RouteSerializer,
     FlightSerializer,
-    OrderSerializer,
+    OrderSerializer, RouteListSerializer,
 )
 
 
@@ -89,9 +90,14 @@ class AirplaneViewSet(viewsets.ModelViewSet):
 
 
 class RouteViewSet(viewsets.ModelViewSet):
-    queryset = Route.objects.all()
+    queryset = Route.objects.select_related("source", "destination")
     serializer_class = RouteSerializer
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return RouteListSerializer
+        return RouteSerializer
 
 
 class FlightViewSet(viewsets.ModelViewSet):
