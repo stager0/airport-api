@@ -1,11 +1,19 @@
 from rest_framework import mixins, viewsets
 from rest_framework.viewsets import GenericViewSet
 
-from airport.models import MealOption, SnacksAndDrinks, ExtraEntertainmentAndComfort, Airport
+from airport.models import (
+    MealOption,
+    SnacksAndDrinks,
+    ExtraEntertainmentAndComfort,
+    Airport,
+    Crew
+)
 from airport.serializers import (
     MealOptionSerializer,
     SnacksAndDrinksSerializer,
-    ExtraEntertainmentAndComfortSerializer, AirportSerializer,
+    ExtraEntertainmentAndComfortSerializer,
+    AirportSerializer,
+    CrewSerializer,
 )
 
 
@@ -39,3 +47,8 @@ class ExtraEntertainmentAndComfortViewSet(
 class AirportViewSet(viewsets.ModelViewSet):
     queryset = Airport.objects.all()
     serializer_class = AirportSerializer
+
+
+class CrewViewSet(viewsets.ModelViewSet):
+    queryset = Crew.objects.all()
+    serializer_class = CrewSerializer
