@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from airport.models import (
     MealOption,
@@ -9,7 +10,7 @@ from airport.models import (
     AirplaneType,
     Airplane,
     Route,
-    Flight
+    Flight, Ticket
 )
 
 
@@ -70,4 +71,31 @@ class FlightSerializer(serializers.ModelSerializer):
             "route",
             "airplane",
             "crew"
+        )
+
+
+class TicketSerializer(serializers.ModelSerializer):
+    def validate(self, attrs):
+        data = super(TicketSerializer, self).validate(attrs)
+        Ticket.validate_ticket(
+            row=attrs["row"],
+            letter=attrs["letter"],
+            airplane=attrs["flight"].airplane,
+            error_to_raise=ValidationError
+        )
+        return data
+
+    class Meta:
+        model = Ticket
+        fields = (
+            "row",
+            "letter",
+            "discount",
+            "has_luggage",
+            "flight",
+            "order",
+            "price",
+            "meal_option",
+            "extra_entertainment_and_comfort",
+            "snacks_and_drinks"
         )
