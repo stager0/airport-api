@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from airport.models import MealOption, SnacksAndDrinks, ExtraEntertainmentAndComfort, Airport, Crew
+from airport.models import MealOption, SnacksAndDrinks, ExtraEntertainmentAndComfort, Airport, Crew, AirplaneType
 
 
 class MealOptionSerializer(serializers.ModelSerializer):
@@ -31,3 +31,9 @@ class CrewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Crew
         fields = ("first_name", "last_name", "position")
+
+
+class AirplaneTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AirplaneType
+        fields = ("name",)
