@@ -98,6 +98,8 @@ class Flight(models.Model):
         Crew,
         related_name="flights"
     )
+    price_economy = models.IntegerField(null=True, blank=True)
+    price_business = models.IntegerField(null=True, blank=True)
 
     class Meta:
         ordering = ["-departure_time"]
@@ -113,7 +115,7 @@ class Order(models.Model):
         on_delete=models.CASCADE,
         related_name="orders"
     )
-    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
@@ -127,27 +129,27 @@ class SnacksAndDrinks(models.Model):
     price = models.DecimalField(max_digits=8, decimal_places=2, editable=False)
 
     def __str__(self):
-        return self.get_name_display()
+        return self.name
 
 
 class MealOption(models.Model):
     MEAL_TYPE_CHOICES = [
-        ("STANDARD", "Standard"),
-        ("VEGETARIAN", "Vegetarian"),
-        ("CHILD", "Children's Portion"),
-        ("NONE", "No Meal")
+        ("1", "Standard"),
+        ("2", "Vegetarian"),
+        ("3", "Children's Portion"),
+        ("4", "No Meal")
     ]
     name = models.CharField(max_length=255, unique=True)
     meal_type = models.CharField(
         max_length=30,
         choices=MEAL_TYPE_CHOICES,
-        default="NONE"
+        default="4"
     )
     weight = models.IntegerField(blank=True, null=True)
     price = models.DecimalField(max_digits=6, decimal_places=2)
 
     def __str__(self):
-        return self.get_name_display()
+        return self.get_meal_type_display()
 
 
 class ExtraEntertainmentAndComfort(models.Model):
@@ -157,7 +159,7 @@ class ExtraEntertainmentAndComfort(models.Model):
     price = models.DecimalField(max_digits=8, decimal_places=2)
 
     def __str__(self):
-        return self.get_name_display()
+        return f"{self.name} -> {self.price}"
 
 
 class Ticket(models.Model):
@@ -182,9 +184,10 @@ class Ticket(models.Model):
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE,
-        related_name="tickets"
+        related_name="tickets",
+        null=True,
     )
-    price = models.DecimalField(max_digits=8, decimal_places=2)
+    price = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     meal_option = models.ForeignKey(
         MealOption,
         on_delete=models.SET_NULL,
@@ -202,6 +205,7 @@ class Ticket(models.Model):
         related_name="tickets",
         blank=True
     )
+    is_business = models.BooleanField(null=True, blank=True, default=False)
 
     @staticmethod
     def validate_ticket(row, letter, airplane, error_to_raise):
