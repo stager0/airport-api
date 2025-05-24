@@ -15,6 +15,7 @@ from airport.models import (
     Ticket,
     Order
 )
+from user.serializers import UserOnlyIdAndNameSerializer
 
 
 class MealOptionSerializer(serializers.ModelSerializer):
@@ -161,6 +162,30 @@ class TicketSerializer(serializers.ModelSerializer):
             "snacks_and_drinks",
         )
 
+
+class TicketDetailSerializer(serializers.ModelSerializer):
+    flight = FlightRetrieveSerializer(read_only=True)
+    meal_option = MealOptionSerializer(read_only=True)
+    extra_entertainment_and_comfort = ExtraEntertainmentAndComfortSerializer(many=True, read_only=True)
+    snacks_and_drinks = SnacksAndDrinksSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Ticket
+        fields = (
+            "id",
+            "row",
+            "letter",
+            "discount",
+            "has_luggage",
+            "flight",
+            "order",
+            "price",
+            "meal_option",
+            "extra_entertainment_and_comfort",
+            "snacks_and_drinks",
+        )
+
+
 class OrderSerializer(serializers.ModelSerializer):
     tickets = TicketSerializer(many=True, read_only=False, allow_empty=False)
 
@@ -175,3 +200,22 @@ class OrderSerializer(serializers.ModelSerializer):
             for ticket in tickets_data:
                 Ticket.objects.create(order=order, **ticket)
             return order
+
+class OrderListSerializer(OrderSerializer):
+    count_of_tickets = serializers.IntegerField(read_only=True)
+    source = serializers.CharField(read_only=True)
+    destination = serializers.CharField(read_only=True)
+    user = UserOnlyIdAndNameSerializer(read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ("id", "created_at", "total_price", "user", "count_of_tickets", "source", "destination")
+
+
+class OrderRetrieveSerializer(serializers.ModelSerializer):
+    tickets = TicketDetailSerializer(many=True, read_only=True)
+    user = UserOnlyIdAndNameSerializer(read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ("id", "created_at", "total_price", "user", "tickets")
