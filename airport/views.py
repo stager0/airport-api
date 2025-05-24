@@ -156,7 +156,7 @@ class OrderViewSet(
         "tickets__flight__route__source__closest_big_city"
     ), destination=F(
         "tickets__flight__route__destination__closest_big_city"
-    ))
+    )).select_related("user")
     serializer_class = OrderListSerializer
     permission_classes = [IsAuthenticated]
 
