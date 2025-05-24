@@ -136,6 +136,20 @@ class FlightRetrieveSerializer(FlightSerializer):
 
 
 class TicketSerializer(serializers.ModelSerializer):
+    meal_option = serializers.PrimaryKeyRelatedField(queryset=MealOption.objects.all())
+    extra_entertainment_and_comfort = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=ExtraEntertainmentAndComfort.objects.all(),
+        required=False,
+        allow_empty=True
+    )
+    snacks_and_drinks = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=SnacksAndDrinks.objects.all(),
+        required=False,
+        allow_empty=True
+    )
+
     def validate(self, attrs):
         data = super(TicketSerializer, self).validate(attrs)
         Ticket.validate_ticket(
@@ -197,8 +211,35 @@ class OrderSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             tickets_data = validated_data.pop("tickets")
             order = Order.objects.create(**validated_data)
-            for ticket in tickets_data:
-                Ticket.objects.create(order=order, **ticket)
+            total_price = 0
+
+            for ticket_data in tickets_data:
+                extras = ticket_data.pop("extra_entertainment_and_comfort", [])
+                snacks_drinks = ticket_data.pop("snacks_and_drinks", [])
+                meal_option = ticket_data.pop("meal_option")
+
+                ticket = Ticket.objects.create(order=order, meal_option=meal_option **ticket_data)
+
+                ticket.extra_entertainment_and_comfort.set(extras)
+                ticket.snacks_and_drinks.set(snacks_drinks)
+
+                if ticket.flight:
+                    if ticket.is_business:
+                        total_price += ticket.flight.price_business
+                    else:
+                        total_price += ticket.flight.price_economy
+
+                if ticket.meal_option:
+                    total_price += ticket.meal_option.price
+
+                for extra in extras:
+                    total_price += extra.price
+
+                for snack in snacks_drinks:
+                    total_price += snack.price
+
+            order.total_price = total_price
+            order.save()
             return order
 
 class OrderListSerializer(OrderSerializer):
