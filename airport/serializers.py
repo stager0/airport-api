@@ -46,10 +46,10 @@ class AirportWithoutIdSerializer(serializers.ModelSerializer):
         fields = ("name", "closest_big_city")
 
 
-class AirportSourceAndDestinationOnlyNamesSerializer(serializers.ModelSerializer):
+class AirportSourceAndDestinationOnlyCitySerializer(serializers.ModelSerializer):
     class Meta:
         model = Airport
-        fields = ("name",)
+        fields = ("closest_big_city",)
 
 
 class CrewSerializer(serializers.ModelSerializer):
@@ -92,8 +92,8 @@ class RouteListSerializer(RouteSerializer):
 
 
 class RouteSourceDestinationNamesSerializer(serializers.ModelSerializer):
-    source = AirportSourceAndDestinationOnlyNamesSerializer(read_only=True)
-    destination = AirportSourceAndDestinationOnlyNamesSerializer(read_only=True)
+    source = AirportSourceAndDestinationOnlyCitySerializer(read_only=True)
+    destination = AirportSourceAndDestinationOnlyCitySerializer(read_only=True)
 
     class Meta:
         model = Route
@@ -131,7 +131,7 @@ class FlightListSerializer(FlightSerializer):
 class FlightRetrieveSerializer(FlightSerializer):
     crew = CrewSerializer(many=True, read_only=True)
     route = RouteListSerializer(read_only=True)
-    airplane = AirplaneSerializer(read_only=True)
+    airplane = AirplaneWithAirplaneType(read_only=True)
 
 
 class TicketSerializer(serializers.ModelSerializer):
