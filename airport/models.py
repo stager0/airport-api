@@ -122,32 +122,9 @@ class Order(models.Model):
         return self.created_at
 
 
-class SnacksAndFood(models.Model):
-    SNACKS_AND_DRINKS_CHOICES = {
-        "COLA": ("Coca-Cola 0.5", 2.00),
-        "FANTA": ("Fanta 0.5", 2.00),
-        "JUICE": ("Juice 0.5", 2.50),
-        "COFFEE": ("Cup of coffee (caramel-latte) 0.33", 3.00),
-        "REDBULL": ("Red-Bull 0.25", 3.50),
-        "WATER": ("Water(PET), 0.5", 1.50),
-        "CHIPS": ("Chips (cheese), 300g", 2.20),
-        "BOUNTY": ("Bounty (big-pack) 200g", 2.50),
-        "MARS": ("Mars (big-pack) 200 g", 2.50),
-        "SNICKERS": ("Snickers (big-pack) 200g", 2.50),
-        "CRACKERS": ("TUC Sour Cream & Onion 3 * 100g", 3.00),
-        "PRINGLES": ("Pringles cheese 200g", 3.50),
-        "SALADE": ("Bio-Salade 'Cesar'", 4.00),
-        "NONE": ("No Snacks and Drinks", 0.00),
-    }
-    name = models.CharField(
-        max_length=100,
-        choices=[(k, v[0]) for k, v in SNACKS_AND_DRINKS_CHOICES.items()],
-        default="NONE")
+class SnacksAndDrinks(models.Model):
+    name = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=8, decimal_places=2, editable=False)
-
-    def save(self, *args, **kwargs):
-        self.price = self.SNACKS_AND_DRINKS_CHOICES[self.name][1]
-        return super().save(*args, **kwargs)
 
     def __str__(self):
         return self.get_name_display()
@@ -174,25 +151,10 @@ class MealOption(models.Model):
 
 
 class ExtraEntertainmentAndComfort(models.Model):
-    EXTRA_CHOICES = {
-        "TABLET": ("Tablet with movies/games", 9.99),
-        "WIRELESS_HEADPHONES": ("Wireless headphones", 7.49),
-        "PILLOW_AND_BLANKET": ("Pillow and blanket", 5.00),
-        "SLEEP_MASK_AND_EARPLUGS": ("Sleep mask and earplugs", 3.50),
-        "WIFI": ("In-flight WI-FI access", 12.00),
-        "NONE": ("No Extra", 0.00),
-    }
     name = models.CharField(
         max_length= 55,
-        choices=[(k, v[0]) for k, v in EXTRA_CHOICES.items()],
-        default="NONE",
-        editable=False
     )
     price = models.DecimalField(max_digits=8, decimal_places=2)
-
-    def save(self, *args, **kwargs):
-        self.price = self.EXTRA_CHOICES[self.name][1]
-        return super().save(*args, **kwargs)
 
     def __str__(self):
         return self.get_name_display()
@@ -235,8 +197,8 @@ class Ticket(models.Model):
         related_name="tickets",
         blank=True
     )
-    snacks_and_food = models.ManyToManyField(
-        SnacksAndFood,
+    snacks_and_drinks = models.ManyToManyField(
+        SnacksAndDrinks,
         related_name="tickets",
         blank=True
     )
