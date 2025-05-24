@@ -101,7 +101,14 @@ class RouteViewSet(viewsets.ModelViewSet):
 
 
 class FlightViewSet(viewsets.ModelViewSet):
-    queryset = Flight.objects.all()
+    queryset = (Flight.objects.select_related(
+        "airplane",
+        "route",
+        "route__source",
+        "route__destination",
+        "airplane__airplane_type"
+    ))
+
     serializer_class = FlightSerializer
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
 
@@ -111,6 +118,30 @@ class FlightViewSet(viewsets.ModelViewSet):
         elif self.action == "retrieve":
             return FlightRetrieveSerializer
         return FlightSerializer
+
+    def get_queryset(self):
+        destination = self.request.query_params.get("destination")
+        source = self.request.query_params.get("source")
+        airplane = self.request.query_params.get("airplane")
+        date = self.request.query_params.get("departure_time")
+
+        queryset = self.queryset
+        if destination or airplane or date or source:
+            if destination:
+                queryset = queryset.filter(route__destination__closest_big_city__icontains=destination)
+            if source:
+                queryset = queryset.filter(route__source__closest_big_city__icontains=source)
+            if airplane:
+                queryset = queryset.filter(airplane__name__icontains=airplane)
+            if date:
+                queryset = queryset.filter(departure_time_gte=date)
+            return queryset.distinct()
+
+        if self.action == "list":
+            return queryset
+        elif self.action == "retrieve":
+            return queryset.prefetch_related("crew__flights")
+
 
 class OrderViewSet(
     mixins.ListModelMixin,
