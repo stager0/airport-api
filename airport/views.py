@@ -1,3 +1,4 @@
+from django.db.models import Count, F
 from django.template.context_processors import request
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -26,7 +27,7 @@ from airport.serializers import (
     AirplaneSerializer,
     RouteSerializer,
     FlightSerializer,
-    OrderSerializer, RouteListSerializer, FlightListSerializer, FlightRetrieveSerializer,
+    OrderSerializer, RouteListSerializer, FlightListSerializer, FlightRetrieveSerializer, OrderListSerializer,
 )
 
 
@@ -148,8 +149,15 @@ class OrderViewSet(
     mixins.CreateModelMixin,
     GenericViewSet
 ):
-    queryset = Order.objects.all()
-    serializer_class = OrderSerializer
+    queryset = Order.objects.all().annotate(
+        count_of_tickets=Count(
+        "tickets"
+    ), source=F(
+        "tickets__flight__route__source__closest_big_city"
+    ), destination=F(
+        "tickets__flight__route__destination__closest_big_city"
+    ))
+    serializer_class = OrderListSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
