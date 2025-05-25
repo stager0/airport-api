@@ -55,7 +55,7 @@ class Route(models.Model):
     distance = models.IntegerField(blank=True, null=True)
 
     def __str__(self):
-        return f"Source: {self.source} ---> Destination: {self.destination}"
+        return f"Source ID: {self.source_id} ---> Destination ID: {self.destination_id}"
 
 
 class Crew(models.Model):
@@ -80,6 +80,7 @@ class Crew(models.Model):
     def full_name_and_position(self):
         return self.first_name + " " + self.last_name + " Position: " + self.position
 
+
 class Flight(models.Model):
     route = models.ForeignKey(
         Route,
@@ -102,7 +103,7 @@ class Flight(models.Model):
     price_business = models.IntegerField(null=True, blank=True)
 
     class Meta:
-        ordering = ["-departure_time"]
+        ordering = ["departure_time"]
 
     def __str__(self):
         return self.route
