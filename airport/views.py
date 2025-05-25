@@ -67,6 +67,17 @@ class AirportViewSet(viewsets.ModelViewSet):
     serializer_class = AirportSerializer
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
 
+    def get_queryset(self):
+        closest_big_city = self.request.query_params.get("closest_big_city")
+        airport_name = self.request.query_params.get("name")
+
+        queryset = self.queryset
+        if closest_big_city:
+            queryset = queryset.filter(closest_big_city__icontains=closest_big_city)
+        if airport_name:
+            queryset = queryset.filter(name__icontains=airport_name)
+        return queryset.distinct()
+
 
 class CrewViewSet(viewsets.ModelViewSet):
     queryset = Crew.objects.all()
