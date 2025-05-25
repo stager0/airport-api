@@ -3,6 +3,9 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from airport.validators import validate_discount_coupon_code
+
+
 class AirplaneType(models.Model):
     name = models.CharField(max_length=255, unique=True)
 
@@ -28,6 +31,10 @@ class Airplane(models.Model):
     @property
     def list_of_seats(self):
         return [i for i in self.letters_in_row]
+
+    @property
+    def seats_in_row_count(self):
+        return len(self.letters_in_row)
 
     def __str__(self):
         return self.name
@@ -101,6 +108,10 @@ class Flight(models.Model):
     )
     price_economy = models.IntegerField(null=True, blank=True)
     price_business = models.IntegerField(null=True, blank=True)
+    # if economy rows are from 11 it means that 1-10 rows are business class
+    # (and the rest are economy to end of airplane's rows)
+    rows_economy_from = models.IntegerField(null=True, blank=True)
+
 
     class Meta:
         ordering = ["departure_time"]
@@ -127,7 +138,7 @@ class Order(models.Model):
 
 class SnacksAndDrinks(models.Model):
     name = models.CharField(max_length=100)
-    price = models.DecimalField(max_digits=8, decimal_places=2, editable=False)
+    price = models.DecimalField(max_digits=8, decimal_places=2)
 
     def __str__(self):
         return self.name
@@ -161,6 +172,15 @@ class ExtraEntertainmentAndComfort(models.Model):
 
     def __str__(self):
         return f"{self.name} -> {self.price}"
+
+
+# for example "new year discount 5%" etc.
+class DiscountCoupon(models.Model):
+    name = models.CharField(max_length=255, null=True)
+    valid_until = models.DateTimeField(null=True)
+    code = models.CharField(null=True, validators=[validate_discount_coupon_code])
+    discount = models.IntegerField(blank=True, null=True, default=0)
+    is_active = models.BooleanField(blank=True, default=True)
 
 
 class Ticket(models.Model):
@@ -207,6 +227,12 @@ class Ticket(models.Model):
         blank=True
     )
     is_business = models.BooleanField(null=True, blank=True, default=False)
+    discount_coupon = models.ForeignKey(
+        DiscountCoupon,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
 
     @staticmethod
     def validate_ticket(row, letter, airplane, error_to_raise):
