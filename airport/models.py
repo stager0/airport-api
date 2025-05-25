@@ -249,11 +249,24 @@ class Ticket(models.Model):
                 {f"The seat must be in range {airplane.list_of_seats}"}
             )
 
+    @staticmethod
+    def validate_discount_coupon(code, error_to_raise):
+        if not DiscountCoupon.objects.filter(code=code).exists():
+            raise error_to_raise(
+                {f"Invalid discount code: '{code}'"}
+            )
+        return code
+
+
     def clean(self):
         Ticket.validate_ticket(
             row=self.row,
             letter=self.letter,
             airplane=self.flight.airplane,
+            error_to_raise=ValidationError
+        )
+        Ticket.validate_discount_coupon(
+            code=self.discount_coupon.code,
             error_to_raise=ValidationError
         )
 
