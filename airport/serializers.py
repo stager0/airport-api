@@ -1,3 +1,5 @@
+from zoneinfo import available_timezones
+
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -13,9 +15,21 @@ from airport.models import (
     Route,
     Flight,
     Ticket,
-    Order
+    Order, DiscountCoupon
 )
 from user.serializers import UserOnlyIdAndNameSerializer
+
+
+class DiscountCouponSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DiscountCoupon
+        fields = ("id", "name", "valid_until", "code", "discount")
+
+
+class DiscountOnlyValueAndNameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DiscountCoupon
+        fields = ("id", "name", "discount")
 
 
 class MealOptionSerializer(serializers.ModelSerializer):
@@ -40,6 +54,7 @@ class AirportSerializer(serializers.ModelSerializer):
     class Meta:
         model = Airport
         fields = ("id", "name", "closest_big_city")
+
 
 class AirportWithoutIdSerializer(serializers.ModelSerializer):
     class Meta:
@@ -117,6 +132,9 @@ class FlightSerializer(serializers.ModelSerializer):
 class FlightListSerializer(FlightSerializer):
     route = RouteSourceDestinationNamesSerializer(read_only=True)
     airplane = AirplaneNameSerializer(read_only=True)
+    places_available = serializers.IntegerField(read_only=True)
+    business_places_available = serializers.SerializerMethodField(read_only=True)
+    economy_places_available = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Flight
@@ -126,13 +144,42 @@ class FlightListSerializer(FlightSerializer):
             "arrival_time",
             "route",
             "airplane",
+            "places_available",
+            "business_places_available",
+            "economy_places_available"
         )
+
+    def get_business_places_available(self, obj):
+        return (obj.airplane.seats_in_row_count * obj.rows_economy_from) - obj.tickets.filter(is_business=True).count()
+
+    def get_economy_places_available(self, obj):
+        return (obj.airplane.seats_in_row_count * (obj.airplane.rows - obj.rows_economy_from)) - obj.tickets.filter(is_business=False).count()
 
 
 class FlightRetrieveSerializer(FlightSerializer):
     crew = CrewSerializer(many=True, read_only=True)
     route = RouteListSerializer(read_only=True)
     airplane = AirplaneWithAirplaneType(read_only=True)
+    all_free_places = serializers.SerializerMethodField(read_only=True)
+
+    class Meta(FlightSerializer.Meta):
+        fields = FlightSerializer.Meta.fields + ("all_free_places",)
+
+    def get_all_free_places(self, obj):
+        taken_seats_and_letters = set(obj.tickets.values_list("row", "letter"))
+        rows = int(obj.airplane.rows)
+        letters = list(obj.airplane.letters_in_row)
+        list_of_free_seats = []
+        list_of_free_business_seats = []
+
+        for row in range(1, rows + 1):
+            for letter in letters:
+                if (row, letter) not in taken_seats_and_letters:
+                    if row > obj.rows_economy_from:
+                        list_of_free_seats.append({"row": row, "letter": letter})
+                    elif row <= obj.rows_economy_from:
+                        list_of_free_business_seats.append({"row": row, "letter": letter})
+        return f"Economy: {list_of_free_seats}",  f"Business: {list_of_free_business_seats}"
 
 
 class TicketSerializer(serializers.ModelSerializer):
@@ -182,6 +229,7 @@ class TicketDetailSerializer(serializers.ModelSerializer):
     meal_option = MealOptionSerializer(read_only=True)
     extra_entertainment_and_comfort = ExtraEntertainmentAndComfortSerializer(many=True, read_only=True)
     snacks_and_drinks = SnacksAndDrinksSerializer(many=True, read_only=True)
+    discount = DiscountOnlyValueAndNameSerializer(read_only=True)
 
     class Meta:
         model = Ticket
@@ -218,7 +266,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 snacks_drinks = ticket_data.pop("snacks_and_drinks", [])
                 meal_option = ticket_data.pop("meal_option")
 
-                ticket = Ticket.objects.create(order=order, meal_option=meal_option **ticket_data)
+                ticket = Ticket.objects.create(order=order, meal_option=meal_option, **ticket_data)
 
                 ticket.extra_entertainment_and_comfort.set(extras)
                 ticket.snacks_and_drinks.set(snacks_drinks)
