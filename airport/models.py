@@ -113,7 +113,6 @@ class Flight(models.Model):
     rows_economy_from = models.IntegerField(null=True, blank=True)
     luggage_price_1_kg = models.FloatField(null=True)
 
-
     class Meta:
         ordering = ["departure_time"]
 
@@ -200,6 +199,7 @@ class Ticket(models.Model):
         ]
     )
     has_luggage = models.BooleanField(blank=True, default=False)
+    luggage_weight = models.FloatField(null=True, blank=True)
     flight = models.ForeignKey(
         Flight,
         on_delete=models.SET_NULL,
@@ -255,7 +255,6 @@ class Ticket(models.Model):
             raise error_to_raise(
                 {f"Invalid discount code: '{code}'"}
             )
-        return code
 
 
     def clean(self):
