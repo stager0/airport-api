@@ -111,6 +111,7 @@ class Flight(models.Model):
     # if economy rows are from 11 it means that 1-10 rows are business class
     # (and the rest are economy to end of airplane's rows)
     rows_economy_from = models.IntegerField(null=True, blank=True)
+    luggage_price_1_kg = models.FloatField(null=True)
 
 
     class Meta:
@@ -181,6 +182,9 @@ class DiscountCoupon(models.Model):
     code = models.CharField(null=True, validators=[validate_discount_coupon_code])
     discount = models.IntegerField(blank=True, null=True, default=0)
     is_active = models.BooleanField(blank=True, default=True)
+
+    def __str__(self):
+        return f"Coupon Name: {self.name}, Code: {self.code}"
 
 
 class Ticket(models.Model):
