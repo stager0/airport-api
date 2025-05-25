@@ -56,12 +56,6 @@ class AirportSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "closest_big_city")
 
 
-class AirportWithoutIdSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Airport
-        fields = ("name", "closest_big_city")
-
-
 class AirportSourceAndDestinationOnlyCitySerializer(serializers.ModelSerializer):
     class Meta:
         model = Airport
@@ -103,8 +97,8 @@ class RouteSerializer(serializers.ModelSerializer):
 
 
 class RouteListSerializer(RouteSerializer):
-    source = AirportWithoutIdSerializer(read_only=True)
-    destination = AirportWithoutIdSerializer(read_only=True)
+    source = AirportSerializer(read_only=True)
+    destination = AirportSerializer(read_only=True)
 
 
 class RouteSourceDestinationNamesSerializer(serializers.ModelSerializer):
@@ -163,7 +157,7 @@ class FlightRetrieveSerializer(FlightSerializer):
     all_free_places = serializers.SerializerMethodField(read_only=True)
 
     class Meta(FlightSerializer.Meta):
-        fields = FlightSerializer.Meta.fields + ("all_free_places",)
+        fields = FlightSerializer.Meta.fields + ("all_free_places", "luggage_price_1_kg", "crew")
 
     def get_all_free_places(self, obj):
         taken_seats_and_letters = set(obj.tickets.values_list("row", "letter"))
@@ -180,6 +174,18 @@ class FlightRetrieveSerializer(FlightSerializer):
                     elif row <= obj.rows_economy_from:
                         list_of_free_business_seats.append({"row": row, "letter": letter})
         return f"Economy: {list_of_free_seats}",  f"Business: {list_of_free_business_seats}"
+
+
+class FlightForOrderSerializer(FlightRetrieveSerializer):
+    class Meta(FlightRetrieveSerializer.Meta):
+        fields = (
+            "id",
+            "departure_time",
+            "arrival_time",
+            "route",
+            "airplane",
+            "luggage_price_1_kg"
+        )
 
 
 class TicketSerializer(serializers.ModelSerializer):
@@ -221,15 +227,18 @@ class TicketSerializer(serializers.ModelSerializer):
             "meal_option",
             "extra_entertainment_and_comfort",
             "snacks_and_drinks",
+            "discount_coupon",
         )
 
 
 class TicketDetailSerializer(serializers.ModelSerializer):
-    flight = FlightRetrieveSerializer(read_only=True)
+    flight = FlightForOrderSerializer(read_only=True)
     meal_option = MealOptionSerializer(read_only=True)
     extra_entertainment_and_comfort = ExtraEntertainmentAndComfortSerializer(many=True, read_only=True)
     snacks_and_drinks = SnacksAndDrinksSerializer(many=True, read_only=True)
-    discount = DiscountOnlyValueAndNameSerializer(read_only=True)
+    discount_coupon = DiscountOnlyValueAndNameSerializer(read_only=True)
+    total_ticket_price = serializers.SerializerMethodField(read_only=True)
+    luggage_price = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Ticket
@@ -240,12 +249,23 @@ class TicketDetailSerializer(serializers.ModelSerializer):
             "discount",
             "has_luggage",
             "flight",
-            "order",
-            "price",
             "meal_option",
             "extra_entertainment_and_comfort",
             "snacks_and_drinks",
+            "discount_coupon",
+            "luggage_weight",
+            "total_ticket_price",
+            "luggage_price"
         )
+
+    def get_total_ticket_price(self, obj):
+        if obj.is_business is True:
+            return Flight.objects.get(id=obj.flight.id).price_business
+        return Flight.objects.get(id=obj.flight.id).price_economy
+
+    def get_luggage_price(self, obj):
+        if obj.has_luggage:
+            return obj.luggage_weight * obj.flight.luggage_price_1_kg
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -265,8 +285,9 @@ class OrderSerializer(serializers.ModelSerializer):
                 extras = ticket_data.pop("extra_entertainment_and_comfort", [])
                 snacks_drinks = ticket_data.pop("snacks_and_drinks", [])
                 meal_option = ticket_data.pop("meal_option")
+                discount_coupon = ticket_data.pop("discount_coupon")
 
-                ticket = Ticket.objects.create(order=order, meal_option=meal_option, **ticket_data)
+                ticket = Ticket.objects.create(order=order, meal_option=meal_option, discount_coupon=discount_coupon, **ticket_data)
 
                 ticket.extra_entertainment_and_comfort.set(extras)
                 ticket.snacks_and_drinks.set(snacks_drinks)
@@ -277,14 +298,23 @@ class OrderSerializer(serializers.ModelSerializer):
                     else:
                         total_price += ticket.flight.price_economy
 
+                if ticket.discount_coupon:
+                    discount_coupons = DiscountCoupon.objects.values_list("code")
+                    if discount_coupon in discount_coupons:
+                        total_price -= (1 - DiscountCoupon.objects.get(discount_coupon).discount / 100)
+
                 if ticket.meal_option:
                     total_price += ticket.meal_option.price
+
+                if ticket.has_luggage:
+                    pass
 
                 for extra in extras:
                     total_price += extra.price
 
                 for snack in snacks_drinks:
                     total_price += snack.price
+
 
             order.total_price = total_price
             order.save()
@@ -295,6 +325,7 @@ class OrderListSerializer(OrderSerializer):
     source = serializers.CharField(read_only=True)
     destination = serializers.CharField(read_only=True)
     user = UserOnlyIdAndNameSerializer(read_only=True)
+
 
     class Meta:
         model = Order
