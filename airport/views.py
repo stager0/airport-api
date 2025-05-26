@@ -43,11 +43,11 @@ from airport.serializers import (
         tags=["MealOption"],
         parameters=[
             OpenApiParameter(
-                name="name", description="Filter orders by MealOption Name (Chicken Curry etc.)",
+                name="name", description="Filter by MealOption Name (Chicken Curry etc.)",
                 required=False, type=str
             ),
             OpenApiParameter(
-                name="meal_type", description="Filter orders by Meal Option Type Id",
+                name="meal_type", description="Filter by Meal Option Type Id",
                 required=False, type=int
             ),
             OpenApiParameter(
@@ -62,7 +62,7 @@ from airport.serializers import (
         },
         examples=[
             OpenApiExample(
-                name="Meal Option List Filter Example",
+                name="Meal Option List Example",
                 value=[
                     {"id": 2, "name": "Beef Steak", "meal_type": "1", "weight": 400, "price": "15.00"}
                 ],
@@ -127,7 +127,69 @@ class MealOptionViewSet(
 
         return queryset.distinct()
 
-
+@extend_schema_view(
+    list=extend_schema(
+        summary="Get a list of all Snacks and Drinks",
+        description="Returns a list of all Snacks and Drinks available in the system",
+        tags=["snacks_and_drinks"],
+        parameters=[
+            OpenApiParameter(
+                name="name", description="Filter by Name (water, cola, fanta etc.)",
+                required=False, type=str
+            )
+        ],
+        responses={
+            200: SnacksAndDrinksSerializer(many=True),
+            401: OpenApiResponse(description="Authentication credentials were not provided"),
+        },
+        examples=[
+            OpenApiExample(
+                name="Snacks And Drinks List Example",
+                value=[
+                    {
+                        "id": 1,
+                        "name": "Coca-Cola 0.5",
+                        "price": "2.00"
+                    },
+                    {
+                        "id": 2,
+                        "name": "Fanta 0.5",
+                        "price": "2.00"
+                    },
+                ],
+                response_only=True
+            )
+        ]
+    ),
+    create=extend_schema(
+        summary="Create a new Snack Or Drink",
+        description="Creates a new Snack or Drink with provided data (name, price)",
+        tags=["snacks_and_drinks"],
+        responses={
+            201: SnacksAndDrinksSerializer,
+            401: OpenApiResponse(description="Authentication credentials were not provided"),
+            400: OpenApiResponse(
+                description="Bad request",
+                examples=[
+                    OpenApiExample(
+                        "Incorrect name and price",
+                        value={
+                            "name": ["This field may not be blank."],
+                            "price": ["A valid number is required."]
+                        }
+                    )
+                ]
+            )
+        },
+        examples=[
+            OpenApiExample(
+                "Create example",
+                value={"name": "Tee", "price": "1.99"},
+                request_only=True
+            )
+        ]
+    )
+)
 class SnacksAndDrinksViewSet(
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
