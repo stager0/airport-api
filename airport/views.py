@@ -15,7 +15,7 @@ from airport.models import (
     Airplane,
     Route,
     Flight,
-    Order
+    Order, DiscountCoupon
 )
 from airport.permissions import IsAdminOrIsAuthenticatedReadOnly
 from airport.serializers import (
@@ -29,7 +29,7 @@ from airport.serializers import (
     RouteSerializer,
     FlightSerializer,
     OrderSerializer, RouteListSerializer, FlightListSerializer, FlightRetrieveSerializer, OrderListSerializer,
-    OrderRetrieveSerializer,
+    OrderRetrieveSerializer, DiscountCouponSerializer,
 )
 
 
@@ -266,3 +266,12 @@ class OrderViewSet(
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+class DiscountCouponViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    GenericViewSet
+):
+    queryset = DiscountCoupon.objects.all()
+    serializer_class = DiscountCouponSerializer
+    permission_classes = [IsAdminOrIsAuthenticatedReadOnly,]
