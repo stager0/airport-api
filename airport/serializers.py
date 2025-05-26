@@ -1,5 +1,3 @@
-from zoneinfo import available_timezones
-
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -15,7 +13,8 @@ from airport.models import (
     Route,
     Flight,
     Ticket,
-    Order, DiscountCoupon
+    Order,
+    DiscountCoupon
 )
 from user.serializers import UserOnlyIdAndNameSerializer
 
@@ -231,7 +230,7 @@ class TicketSerializer(serializers.ModelSerializer):
         )
 
 
-class TicketDetailSerializer(serializers.ModelSerializer):
+class TicketDetailSerializer (serializers.ModelSerializer):
     flight = FlightForOrderSerializer(read_only=True)
     meal_option = MealOptionSerializer(read_only=True)
     extra_entertainment_and_comfort = ExtraEntertainmentAndComfortSerializer(many=True, read_only=True)
@@ -306,8 +305,8 @@ class OrderSerializer(serializers.ModelSerializer):
                 if ticket.meal_option:
                     total_price += ticket.meal_option.price
 
-                if ticket.has_luggage:
-                    pass
+                if ticket.has_luggage and ticket.luggage_weight > 0:
+                    total_price = ticket.luggage_weight * ticket.flight.luggage_price_1_kg
 
                 for extra in extras:
                     total_price += extra.price
