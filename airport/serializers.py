@@ -1,3 +1,5 @@
+from decimal import Decimal, ROUND_HALF_UP
+
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -201,16 +203,17 @@ class TicketSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True
     )
+    discount_coupon = serializers.CharField(required=False)
+    discount = serializers.IntegerField(read_only=True)
 
     def validate(self, attrs):
-        data = super(TicketSerializer, self).validate(attrs)
         Ticket.validate_ticket(
             row=attrs["row"],
             letter=attrs["letter"],
             airplane=attrs["flight"].airplane,
             error_to_raise=ValidationError
         )
-        return data
+        return attrs
 
     class Meta:
         model = Ticket
@@ -227,6 +230,7 @@ class TicketSerializer(serializers.ModelSerializer):
             "extra_entertainment_and_comfort",
             "snacks_and_drinks",
             "discount_coupon",
+            "luggage_weight"
         )
 
 
@@ -236,8 +240,9 @@ class TicketDetailSerializer (serializers.ModelSerializer):
     extra_entertainment_and_comfort = ExtraEntertainmentAndComfortSerializer(many=True, read_only=True)
     snacks_and_drinks = SnacksAndDrinksSerializer(many=True, read_only=True)
     discount_coupon = DiscountOnlyValueAndNameSerializer(read_only=True)
-    total_ticket_price = serializers.SerializerMethodField(read_only=True)
+    ticket_price = serializers.SerializerMethodField(read_only=True)
     luggage_price = serializers.SerializerMethodField(read_only=True)
+    extra_price = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Ticket
@@ -253,18 +258,37 @@ class TicketDetailSerializer (serializers.ModelSerializer):
             "snacks_and_drinks",
             "discount_coupon",
             "luggage_weight",
-            "total_ticket_price",
-            "luggage_price"
+            "ticket_price",
+            "luggage_price",
+            "extra_price"
         )
 
-    def get_total_ticket_price(self, obj):
+    def get_ticket_price(self, obj):
         if obj.is_business is True:
             return Flight.objects.get(id=obj.flight.id).price_business
         return Flight.objects.get(id=obj.flight.id).price_economy
 
     def get_luggage_price(self, obj):
-        if obj.has_luggage:
+        if obj.has_luggage and obj.luggage_weight is not None:
             return obj.luggage_weight * obj.flight.luggage_price_1_kg
+
+    def get_extra_price(self, obj):
+        entertainment = [item.name for item in obj.extra_entertainment_and_comfort.all()]
+        snacks = [item.name for item in obj.snacks_and_drinks.all()]
+        meal_type = obj.meal_option.name
+
+        total_price = 0
+        if len(entertainment) > 0:
+            for i in entertainment:
+                total_price += ExtraEntertainmentAndComfort.objects.get(name=i).price
+        if len(snacks) > 0:
+            for i in snacks:
+                total_price += SnacksAndDrinks.objects.get(name=i).price
+
+        if meal_type and meal_type != "NONE":
+            total_price += MealOption.objects.get(name=meal_type).price
+
+        return total_price
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -272,7 +296,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ("id", "created_at", "total_price", "user", "tickets")
+        fields = ("id", "created_at", "total_price", "tickets")
 
     def create(self, validated_data):
         with transaction.atomic():
@@ -284,47 +308,66 @@ class OrderSerializer(serializers.ModelSerializer):
                 extras = ticket_data.pop("extra_entertainment_and_comfort", [])
                 snacks_drinks = ticket_data.pop("snacks_and_drinks", [])
                 meal_option = ticket_data.pop("meal_option")
-                discount_coupon = ticket_data.pop("discount_coupon")
+                discount_coupon = ticket_data.pop("discount_coupon", None)
+                coupon_object = None
+                if discount_coupon:
+                    try:
+                        coupon_object = DiscountCoupon.objects.get(code=discount_coupon)
+                    except DiscountCoupon.DoesNotExist:
+                        pass
 
-                ticket = Ticket.objects.create(order=order, meal_option=meal_option, discount_coupon=discount_coupon, **ticket_data)
+                if coupon_object:
+                    ticket = Ticket.objects.create(order=order, meal_option=meal_option, discount_coupon=coupon_object, **ticket_data)
+                else:
+                    ticket = Ticket.objects.create(order=order, meal_option=meal_option, **ticket_data)
 
                 ticket.extra_entertainment_and_comfort.set(extras)
                 ticket.snacks_and_drinks.set(snacks_drinks)
 
+                ticket_price = 0
                 if ticket.flight:
                     if ticket.is_business:
-                        total_price += ticket.flight.price_business
+                        ticket_price += ticket.flight.price_business
                     else:
-                        total_price += ticket.flight.price_economy
-
-                if ticket.discount_coupon:
-                    discount_coupons = DiscountCoupon.objects.values_list("code")
-                    if discount_coupon in discount_coupons:
-                        total_price -= (1 - DiscountCoupon.objects.get(discount_coupon).discount / 100)
+                        ticket_price += ticket.flight.price_economy
 
                 if ticket.meal_option:
-                    total_price += ticket.meal_option.price
+                    ticket_price += ticket.meal_option.price
 
-                if ticket.has_luggage and ticket.luggage_weight > 0:
-                    total_price = ticket.luggage_weight * ticket.flight.luggage_price_1_kg
+                if ticket.has_luggage is False and ticket.luggage_weight is not None:
+                    ticket.has_luggage = True
+
+                if ticket.has_luggage and ticket.luggage_weight is not None:
+                    ticket_price += Decimal(ticket.luggage_weight) * ticket.flight.luggage_price_1_kg
 
                 for extra in extras:
-                    total_price += extra.price
+                    ticket_price += extra.price
 
                 for snack in snacks_drinks:
-                    total_price += snack.price
+                    ticket_price += snack.price
 
+                if coupon_object:
+                    discount = coupon_object.discount
+                    ticket_price *= Decimal(1 - discount / 100)
+                    ticket.discount = discount
 
-            order.total_price = total_price
+                if not coupon_object and ticket.discount > 0:
+                    ticket.discount = 0
+
+                total_price += ticket_price
+                ticket.price = Decimal(total_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                ticket.save()
+
+            order.total_price = Decimal(total_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
             order.save()
             return order
+
 
 class OrderListSerializer(OrderSerializer):
     count_of_tickets = serializers.IntegerField(read_only=True)
     source = serializers.CharField(read_only=True)
     destination = serializers.CharField(read_only=True)
     user = UserOnlyIdAndNameSerializer(read_only=True)
-
 
     class Meta:
         model = Order
@@ -338,3 +381,4 @@ class OrderRetrieveSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ("id", "created_at", "total_price", "user", "tickets")
+        read_only_fields = ("user",)
