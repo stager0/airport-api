@@ -111,7 +111,7 @@ class Flight(models.Model):
     # if economy rows are from 11 it means that 1-10 rows are business class
     # (and the rest are economy to end of airplane's rows)
     rows_economy_from = models.IntegerField(null=True, blank=True)
-    luggage_price_1_kg = models.FloatField(null=True)
+    luggage_price_1_kg = models.DecimalField(decimal_places=2, max_digits=8, null=True)
 
     class Meta:
         ordering = ["departure_time"]
@@ -199,7 +199,7 @@ class Ticket(models.Model):
         ]
     )
     has_luggage = models.BooleanField(blank=True, default=False)
-    luggage_weight = models.FloatField(null=True, blank=True)
+    luggage_weight = models.DecimalField(decimal_places=2, max_digits=8, null=True, blank=True)
     flight = models.ForeignKey(
         Flight,
         on_delete=models.SET_NULL,
@@ -212,7 +212,7 @@ class Ticket(models.Model):
         related_name="tickets",
         null=True,
     )
-    price = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     meal_option = models.ForeignKey(
         MealOption,
         on_delete=models.SET_NULL,
@@ -256,7 +256,6 @@ class Ticket(models.Model):
                 {f"Invalid discount code: '{code}'"}
             )
 
-
     def clean(self):
         Ticket.validate_ticket(
             row=self.row,
@@ -264,7 +263,8 @@ class Ticket(models.Model):
             airplane=self.flight.airplane,
             error_to_raise=ValidationError
         )
-        Ticket.validate_discount_coupon(
+        if self.discount_coupon:
+            Ticket.validate_discount_coupon(
             code=self.discount_coupon.code,
             error_to_raise=ValidationError
         )
