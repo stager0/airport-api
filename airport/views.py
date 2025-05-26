@@ -1,5 +1,6 @@
 from django.db.models import Count, F
 from django.db.models.functions import Length
+from django.db.transaction import mark_for_rollback_on_error
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
@@ -40,6 +41,21 @@ class MealOptionViewSet(
     queryset = MealOption.objects.all()
     serializer_class = MealOptionSerializer
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
+
+    def get_queryset(self):
+        price = self.queryset.query_params.get("price")
+        name = self.queryset.query_params.get("name")
+        meal_type = self.queryset.query_params.get("meal_type")
+
+        queryset = self.queryset
+        if price:
+            queryset = queryset.filter(price__lte=price)
+        if name:
+            queryset = queryset.filter(name__icontains=name)
+        if meal_type:
+            queryset = queryset.filter(meal_type__icontains=meal_type)
+
+        return queryset.distinct()
 
 
 class SnacksAndDrinksViewSet(
