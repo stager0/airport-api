@@ -86,6 +86,15 @@ class ExtraEntertainmentAndComfortViewSet(
     serializer_class = ExtraEntertainmentAndComfortSerializer
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
 
+    def get_queryset(self):
+        name = self.request.query_params.get("name")
+
+        queryset = self.queryset
+        if name:
+            queryset = queryset.filter(name__icontains=name)
+
+        return queryset.distinct()
+
 
 class AirportViewSet(viewsets.ModelViewSet):
     queryset = Airport.objects.all()
@@ -101,6 +110,7 @@ class AirportViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(closest_big_city__icontains=closest_big_city)
         if airport_name:
             queryset = queryset.filter(name__icontains=airport_name)
+
         return queryset.distinct()
 
 
@@ -121,6 +131,7 @@ class CrewViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(last_name__icontains=last_name)
         if position:
             queryset = queryset.filter(position__icontains=position)
+
         return queryset.distinct()
 
 
@@ -158,7 +169,6 @@ class RouteViewSet(viewsets.ModelViewSet):
         destination_airport = self.request.query_params.get("destination_airport")
 
         queryset = self.queryset
-
         if source:
             queryset = queryset.filter(source__closest_big_city__icontains=source)
         elif destination:
