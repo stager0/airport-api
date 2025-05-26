@@ -67,6 +67,15 @@ class SnacksAndDrinksViewSet(
     serializer_class = SnacksAndDrinksSerializer
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
 
+    def get_queryset(self):
+        name = self.request.query_params.get("name")
+
+        queryset = self.queryset
+        if name:
+            queryset = queryset.filter(name__icontains=name)
+
+        return queryset.distinct()
+
 
 class ExtraEntertainmentAndComfortViewSet(
     mixins.ListModelMixin,
