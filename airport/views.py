@@ -534,7 +534,72 @@ class AirplaneTypeViewSet(
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
 
 
-class AirplaneViewSet(viewsets.ModelViewSet):
+@extend_schema_view(
+    list=extend_schema(
+        summary="Get a list of all Airplanes",
+        description="Retrieve a list of all Airplanes in format (name, rows, letters_in_row, airplane_type)",
+        tags=["airplane"],
+        request=AirplaneSerializer,
+        responses={
+            200: AirplaneSerializer(many=True),
+            401: OpenApiResponse(description="Authentication credentials were not provided")
+        },
+        examples=[
+            OpenApiExample(
+                "Item from Airplane List Example",
+                value={
+                    "id": 1,
+                    "name": "Sky Explorer",
+                    "rows": 30,
+                    "letters_in_row": "ABCDEF",
+                    "airplane_type": 1
+                },
+            )
+        ]
+    ),
+    create=extend_schema(
+        summary="Create an Airplane",
+        description="Create an Airplane with provided data (name, rows, letters_in_row, airplane_type(pk))",
+        tags=["airplane"],
+        request=AirplaneSerializer,
+        responses={
+            201: AirplaneSerializer,
+            401: OpenApiResponse(description="Authentication credentials were not provided"),
+            400: OpenApiResponse(
+                description="Bad Request",
+                examples=[
+                    OpenApiExample(
+                        "Empty name, rows, letters_on_row, airplane_type",
+                        value={
+                            "name": ["This field may not be blank."],
+                            "rows": ["A valid integer is required."],
+                            "letters_in_row": ["This field may not be blank."],
+                            "airplane_type": ["This field may not be null."]
+                        },
+                        status_codes=[400]
+                    )
+                ]
+            )
+        },
+        examples=[
+            OpenApiExample(
+                "Create a new Airplane",
+                value={
+                    "name": "Sky Explorer Turbo",
+                    "rows": 25,
+                    "letters_in_row": "ABCDE",
+                    "airplane_type": 1
+                },
+                request_only=True
+            )
+        ]
+    )
+)
+class AirplaneViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    GenericViewSet
+):
     queryset = Airplane.objects.all()
     serializer_class = AirplaneSerializer
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
