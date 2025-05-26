@@ -143,10 +143,10 @@ class FlightListSerializer(FlightSerializer):
         )
 
     def get_business_places_available(self, obj):
-        return (obj.airplane.seats_in_row_count * obj.rows_economy_from) - obj.tickets.filter(is_business=True).count()
+        return (obj.airplane.seats_in_row_count * obj.rows_economy_from) - obj.taken_business
 
     def get_economy_places_available(self, obj):
-        return (obj.airplane.seats_in_row_count * (obj.airplane.rows - obj.rows_economy_from)) - obj.tickets.filter(is_business=False).count()
+        return (obj.airplane.seats_in_row_count * (obj.airplane.rows - obj.rows_economy_from)) - obj.economy_taken
 
 
 class FlightRetrieveSerializer(FlightSerializer):

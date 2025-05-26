@@ -1,4 +1,4 @@
-from django.db.models import Count, F
+from django.db.models import Count, F, Q
 from django.db.models.functions import Length
 from django.db.transaction import mark_for_rollback_on_error
 from rest_framework import mixins, viewsets
@@ -182,13 +182,13 @@ class RouteViewSet(viewsets.ModelViewSet):
 
 
 class FlightViewSet(viewsets.ModelViewSet):
-    queryset = (Flight.objects.select_related(
+    queryset = Flight.objects.select_related(
         "airplane",
         "route",
         "route__source",
         "route__destination",
         "airplane__airplane_type",
-    ))
+    )
 
     serializer_class = FlightSerializer
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
@@ -217,9 +217,11 @@ class FlightViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(departure_time_gte=date)
 
         if self.action == "list":
-            return queryset.distinct().annotate(
+            return queryset.prefetch_related("tickets").distinct().annotate(
                 row_length=Length("airplane__letters_in_row"),
-                places_available=(F("airplane__rows") * F("row_length")) - Count("tickets")
+                places_available=(F("airplane__rows") * F("row_length")) - Count("tickets"),
+                taken_business = Count("tickets", filter=Q(tickets__is_business=True), distinct=True),
+                economy_taken = Count("tickets", filter=Q(tickets__is_business=False), distinct=True)
             )
 
         elif self.action == "retrieve":
