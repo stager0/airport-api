@@ -247,6 +247,14 @@ class OrderViewSet(
 
     def get_queryset(self):
         queryset = self.queryset.filter(user=self.request.user)
+        if self.action == "retrieve":
+            return queryset.prefetch_related(
+                "tickets__flight__route__source",
+                "tickets__flight__route__destination",
+                "tickets__extra_entertainment_and_comfort",
+                "tickets__snacks_and_drinks",
+                "tickets__meal_option"
+            )
         return queryset
 
     def get_serializer_class(self):
