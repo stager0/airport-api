@@ -5,6 +5,7 @@ from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 
+from airport.example_swagger_dicts.dict_order_retrieve_example import example_order_retrieve_dict
 from airport.models import (
     MealOption,
     SnacksAndDrinks,
@@ -414,7 +415,7 @@ class AirportViewSet(
     ),
     create=extend_schema(
         summary="Create a Crew Person",
-        description="Create a crew Person with provided data (first_name, last_name, position)",
+        description="Creates a crew Person with provided data (first_name, last_name, position)",
         tags=["crew"],
         request=CrewSerializer,
         responses={
@@ -451,7 +452,7 @@ class CrewViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     GenericViewSet
-    ):
+):
     queryset = Crew.objects.all()
     serializer_class = CrewSerializer
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
@@ -494,7 +495,7 @@ class CrewViewSet(
     ),
     create=extend_schema(
         summary="Create an Airplane Type",
-        description="Create an Airplane Type with provided name",
+        description="Creates an Airplane Type with provided name",
         tags=["airplane_type"],
         request=AirplaneType,
         responses={
@@ -506,7 +507,7 @@ class CrewViewSet(
                     OpenApiExample(
                         "Empty Airplane Name",
                         value={
-                                "name": ["This field may not be blank."]
+                            "name": ["This field may not be blank."]
                         },
                         status_codes=[400]
                     )
@@ -559,7 +560,7 @@ class AirplaneTypeViewSet(
     ),
     create=extend_schema(
         summary="Create an Airplane",
-        description="Create an Airplane with provided data (name, rows, letters_in_row, airplane_type(pk))",
+        description="Creates an Airplane with provided data (name, rows, letters_in_row, airplane_type(pk))",
         tags=["airplane"],
         request=AirplaneSerializer,
         responses={
@@ -681,6 +682,101 @@ class FlightViewSet(viewsets.ModelViewSet):
             return queryset.prefetch_related("crew__flights").distinct()
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="Get all Orders (only for actual user)",
+        description="Retrieve list of all Orders for actual(request) user. User can see only personal orders",
+        tags=["order"],
+        responses={
+            200: OrderListSerializer,
+            401: OpenApiResponse(description="Authorisation credentials were not provided"),
+        },
+        request=OrderListSerializer,
+        examples=[
+            OpenApiExample(
+                "Item from Orders List, Example",
+                value={
+                    "id": 33,
+                    "created_at": "2025-05-26T12:01:25.173735Z",
+                    "total_price": "685.48",
+                    "user": {
+                        "id": 1,
+                        "username": "admin"
+                    },
+                    "count_of_tickets": 1,
+                    "source": "New York City",
+                    "destination": "London"
+                }
+            )
+        ]
+    ),
+    create=extend_schema(
+        summary="Create an Order",
+        description="Creates an Order and tickets, it counts order.total_price and etc. It's need only to add all tickets",
+        request=OrderSerializer,
+        tags=["order"],
+        responses={
+            201: OrderSerializer,
+            401: OpenApiResponse(description="Authentication credentials were not provided"),
+            400: OpenApiResponse(
+                description="Bad Request",
+                examples=[
+                    OpenApiExample(
+                        "No Ticket",
+                        value={
+                            "tickets": {
+                                "non_field_errors": [
+                                    "This list may not be empty."
+                                ]
+                            }
+                        },
+                        status_codes=[400]
+                    )
+                ]
+            )
+        },
+        examples=[
+            OpenApiExample(
+                "Create new Order Example",
+                value=[
+                    {
+                        "tickets": [
+                            {
+                                "row": 12,
+                                "letter": "C",
+                                "has_luggage": "true",
+                                "flight": 1,
+                                "meal_option": 6,
+                                "extra_entertainment_and_comfort": "[1, 2, 3, 4, 5]",
+                                "snacks_and_drinks": "[6, 1, 2, 3, 4, 5]",
+                                "luggage_weight": 49.0
+                            }
+                        ],
+                    }
+                ],
+                request_only=True
+            )
+        ]
+    ),
+    retrieve=extend_schema(
+        summary="Get Single Item by Id",
+        description="Retrieve detail information about an order (all info about tickets, prices and etc.) using its unique ID",
+        tags=["order"],
+        request=OrderRetrieveSerializer,
+        responses={
+            200: OrderRetrieveSerializer,
+            404: OpenApiResponse(description="No Order matches the given query.")
+        },
+        examples=[
+            OpenApiExample(
+                "Retrieve Example",
+                value=[
+                    example_order_retrieve_dict
+                ]
+            )
+        ]
+    )
+)
 class OrderViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
@@ -722,6 +818,68 @@ class OrderViewSet(
         serializer.save(user=self.request.user)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="Get a list of all Discount Coupons",
+        description="Retrieve a list of all Discount Coupons in format (name, valid_until, code, discount)",
+        tags=["discount_coupon"],
+        request=DiscountCouponSerializer,
+        responses={
+            200: DiscountCouponSerializer(many=True),
+            401: OpenApiResponse(description="Authentication credentials were not provided")
+        },
+        examples=[
+            OpenApiExample(
+                "Item from Airplane List Example",
+                value={
+                    "id": 4,
+                    "name": "Expired Deal",
+                    "valid_until": "2024-12-31T23:59:59Z",
+                    "code": "OLD111DEAL",
+                    "discount": 20
+                },
+            )
+        ]
+    ),
+    create=extend_schema(
+        summary="Create an Discount Coupon",
+        description="Create an Discount Coupon with provided data (name, valid_until, code, discount (0-100))",
+        tags=["discount_coupon"],
+        request=DiscountCouponSerializer,
+        responses={
+            201: DiscountCouponSerializer,
+            401: OpenApiResponse(description="Authentication credentials were not provided"),
+            400: OpenApiResponse(
+                description="Bad Request",
+                examples=[
+                    OpenApiExample(
+                        "Empty name, valid_until, code, discount",
+                        value={
+                            "name": ["This field may not be blank."],
+                            "valid_until": ["Datetime has wrong format. Use one of these formats instead: "
+                                            "YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z]."],
+                            "code": ["This field may not be blank."],
+                            "discount": ["A valid integer is required."]
+                        },
+                        status_codes=[400]
+                    )
+                ]
+            )
+        },
+        examples=[
+            OpenApiExample(
+                "Create a new Discount Coupon",
+                value={
+                    "name": "New year BOOM",
+                    "valid_until": "2024-12-31T23:59:59Z",
+                    "code": "NEWYEAR111",
+                    "discount": 25
+                },
+                request_only=True
+            )
+        ]
+    )
+)
 class DiscountCouponViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
