@@ -1,6 +1,9 @@
+from http.client import responses
+
 from django.db.models import Count, F, Q
 from django.db.models.functions import Length
 from django.db.transaction import mark_for_rollback_on_error
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiResponse, OpenApiExample
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
@@ -33,6 +36,73 @@ from airport.serializers import (
 )
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="Retrieve a list of all Meal Options",
+        description="Returns a list of all Meal Options available in the system",
+        tags=["MealOption"],
+        parameters=[
+            OpenApiParameter(
+                name="name", description="Filter orders by MealOption Name (Chicken Curry etc.)",
+                required=False, type=str
+            ),
+            OpenApiParameter(
+                name="meal_type", description="Filter orders by Meal Option Type Id",
+                required=False, type=int
+            ),
+            OpenApiParameter(
+                name="price",
+                description="Filter to this price (if ?price=20 -> return all Meal Option which cost less than 20 )",
+                required=False, type=int
+            )
+        ],
+        responses={
+            200: MealOptionSerializer(many=True),
+            401: OpenApiResponse(description="Authentication credentials were not provided")
+        },
+        examples=[
+            OpenApiExample(
+                name="Meal Option List Filter Example",
+                value=[
+                    {"id": 2, "name": "Beef Steak", "meal_type": "1", "weight": 400, "price": "15.00"}
+                ],
+                response_only=True
+            )
+        ]
+    ),
+    create=extend_schema(
+        summary="Create a new Meal Option",
+        description="Creates a new Meal Option with provided data (name, meal_type, weight, price)",
+        tags=["MealOption"],
+        request=MealOptionSerializer,
+        responses={
+            201: MealOptionSerializer,
+            401: OpenApiResponse(description="Authentication credentials were not provided"),
+            400: OpenApiResponse(
+                description="Bad request",
+                examples=[
+                    OpenApiExample(
+                        "Incorrect price and empty name",
+                        value={
+                            "name": ["This field may not be blank."],
+                            "price": ["A valid number is required."]
+                        },
+                        status_codes=["400"]
+                    )
+                ]
+            ),
+        },
+        examples=[
+            OpenApiExample(
+                name="Create Meal Type Example",
+                value=[
+                    {"name": "Beef Steak BBQ", "meal_type": "1", "weight": 500, "price": "19.00"},
+                ],
+                request_only=True
+            )
+        ]
+    ),
+)
 class MealOptionViewSet(
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
@@ -43,9 +113,9 @@ class MealOptionViewSet(
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
 
     def get_queryset(self):
-        price = self.queryset.query_params.get("price")
-        name = self.queryset.query_params.get("name")
-        meal_type = self.queryset.query_params.get("meal_type")
+        price = self.request.query_params.get("price")
+        name = self.request.query_params.get("name")
+        meal_type = self.request.query_params.get("meal_type")
 
         queryset = self.queryset
         if price:
@@ -53,7 +123,7 @@ class MealOptionViewSet(
         if name:
             queryset = queryset.filter(name__icontains=name)
         if meal_type:
-            queryset = queryset.filter(meal_type__icontains=meal_type)
+            queryset = queryset.filter(meal_type=meal_type)
 
         return queryset.distinct()
 
@@ -220,8 +290,8 @@ class FlightViewSet(viewsets.ModelViewSet):
             return queryset.prefetch_related("tickets").distinct().annotate(
                 row_length=Length("airplane__letters_in_row"),
                 places_available=(F("airplane__rows") * F("row_length")) - Count("tickets"),
-                taken_business = Count("tickets", filter=Q(tickets__is_business=True), distinct=True),
-                economy_taken = Count("tickets", filter=Q(tickets__is_business=False), distinct=True)
+                taken_business=Count("tickets", filter=Q(tickets__is_business=True), distinct=True),
+                economy_taken=Count("tickets", filter=Q(tickets__is_business=False), distinct=True)
             )
 
         elif self.action == "retrieve":
@@ -262,10 +332,12 @@ class OrderViewSet(
             return OrderRetrieveSerializer
         if self.action == "list":
             return OrderListSerializer
-        return OrderSerializer
+        if self.action == "create":
+            return OrderSerializer
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
 
 class DiscountCouponViewSet(
     mixins.ListModelMixin,
@@ -274,4 +346,4 @@ class DiscountCouponViewSet(
 ):
     queryset = DiscountCoupon.objects.all()
     serializer_class = DiscountCouponSerializer
-    permission_classes = [IsAdminOrIsAuthenticatedReadOnly,]
+    permission_classes = [IsAdminOrIsAuthenticatedReadOnly, ]
