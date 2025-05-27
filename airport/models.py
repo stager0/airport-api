@@ -19,9 +19,8 @@ class Airplane(models.Model):
     letters_in_row = models.CharField(max_length=15)
     airplane_type = models.ForeignKey(
         AirplaneType,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name="airplanes",
-        null=True
     )
 
     @property
@@ -42,7 +41,7 @@ class Airplane(models.Model):
 
 class Airport(models.Model):
     name = models.CharField(max_length=255)
-    closest_big_city = models.CharField(max_length=255, null=True, blank=True)
+    closest_big_city = models.CharField(max_length=255)
 
     def __str__(self):
         return f"{self.name} ({self.closest_big_city})"
@@ -59,7 +58,7 @@ class Route(models.Model):
         on_delete=models.CASCADE,
         related_name="arrivals"
     )
-    distance = models.IntegerField(blank=True, null=True)
+    distance = models.IntegerField(validators=[MaxValueValidator(9999)])
 
     def __str__(self):
         return f"Source ID: {self.source_id} ---> Destination ID: {self.destination_id}"
@@ -176,10 +175,10 @@ class ExtraEntertainmentAndComfort(models.Model):
 
 # for example "new year discount 5%" etc.
 class DiscountCoupon(models.Model):
-    name = models.CharField(max_length=255, null=True)
-    valid_until = models.DateTimeField(null=True)
-    code = models.CharField(null=True, validators=[validate_discount_coupon_code])
-    discount = models.IntegerField(blank=True, null=True, default=0)
+    name = models.CharField(max_length=255)
+    valid_until = models.DateTimeField()
+    code = models.CharField(validators=[validate_discount_coupon_code])
+    discount = models.IntegerField(null=False)
     is_active = models.BooleanField(blank=True, default=True)
 
     def __str__(self):
