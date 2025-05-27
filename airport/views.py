@@ -1,14 +1,9 @@
 from django.db.models import Count, F, Q
 from django.db.models.functions import Length
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiResponse, OpenApiExample
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 
-from airport.example_swagger_dicts.dicts_flight_examples import dict_flight_list_example, \
-    errors_when_there_are_not_fields_provided, dict_create_example, dict_retrieve_example, \
-    dict_flight_update_empty_example
-from airport.example_swagger_dicts.dict_order_retrieve_example import example_order_retrieve_dict
 from airport.models import (
     MealOption,
     SnacksAndDrinks,
@@ -26,6 +21,7 @@ from airport.schema.airplane_schema import airplane_schema
 from airport.schema.airplane_type_schema import airport_type_schema
 from airport.schema.airport_schema import airport_schema
 from airport.schema.crew_schema import crew_schema
+from airport.schema.discount_coupon_schema import discount_coupon_schema
 from airport.schema.extra_entertainment_and_comfort_schema import extra_entertainment_and_comfort_schema
 from airport.schema.flight_schema import flight_schema
 from airport.schema.meal_option_schema import meal_option_schema
@@ -313,68 +309,7 @@ class OrderViewSet(
         serializer.save(user=self.request.user)
 
 
-@extend_schema_view(
-    list=extend_schema(
-        summary="Get a list of all Discount Coupons",
-        description="Retrieve a list of all Discount Coupons in format (name, valid_until, code, discount)",
-        tags=["discount_coupon"],
-        request=DiscountCouponSerializer,
-        responses={
-            200: DiscountCouponSerializer(many=True),
-            401: OpenApiResponse(description="Authentication credentials were not provided")
-        },
-        examples=[
-            OpenApiExample(
-                "Item from Airplane List Example",
-                value={
-                    "id": 4,
-                    "name": "Expired Deal",
-                    "valid_until": "2024-12-31T23:59:59Z",
-                    "code": "OLD111DEAL",
-                    "discount": 20
-                },
-            )
-        ]
-    ),
-    create=extend_schema(
-        summary="Create an Discount Coupon",
-        description="Create an Discount Coupon with provided data (name, valid_until, code, discount (0-100))",
-        tags=["discount_coupon"],
-        request=DiscountCouponSerializer,
-        responses={
-            201: DiscountCouponSerializer,
-            401: OpenApiResponse(description="Authentication credentials were not provided"),
-            400: OpenApiResponse(
-                description="Bad Request",
-                examples=[
-                    OpenApiExample(
-                        "Empty name, valid_until, code, discount",
-                        value={
-                            "name": ["This field may not be blank."],
-                            "valid_until": ["Datetime has wrong format. Use one of these formats instead: "
-                                            "YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z]."],
-                            "code": ["This field may not be blank."],
-                            "discount": ["A valid integer is required."]
-                        },
-                        status_codes=["400"]
-                    )
-                ]
-            )
-        },
-        examples=[
-            OpenApiExample(
-                "Create a new Discount Coupon",
-                value={
-                    "name": "New year BOOM",
-                    "valid_until": "2024-12-31T23:59:59Z",
-                    "code": "NEWYEAR111",
-                    "discount": 25
-                },
-                request_only=True
-            )
-        ]
-    )
-)
+@discount_coupon_schema
 class DiscountCouponViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
