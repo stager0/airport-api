@@ -24,6 +24,28 @@ admin.site.register(MealOption)
 admin.site.register(ExtraEntertainmentAndComfort)
 admin.site.register(DiscountCoupon)
 
+class TicketInline(admin.TabularInline):
+    model = Ticket
+    extra = 0
+    readonly_fields = ("discount",)
+
+    def get_queryset(self, request):
+        return (
+            super().get_queryset(request)
+            .select_related(
+                "flight",
+                "flight__route",
+                "flight__route__source",
+                "flight__route__destination",
+                "order",
+                "meal_option",
+                "discount_coupon"
+            )
+            .prefetch_related(
+                "extra_entertainment_and_comfort",
+                "snacks_and_drinks"
+            )
+        )
 
 
 @admin.register(Flight)
@@ -43,9 +65,6 @@ class FlightAdmin(admin.ModelAdmin):
         "route__source__name",
         "route__destination__name",
         "departure_time",
-        "price_business",
-        "price_economy",
-        "luggage_price_1_kg"
     )
     search_fields = (
         "route__source__name",
@@ -77,6 +96,7 @@ class FlightAdmin(admin.ModelAdmin):
             "airplane",
         ).prefetch_related("crew")
 
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = ("id", "created_at", "user", "total_price")
@@ -85,6 +105,7 @@ class OrderAdmin(admin.ModelAdmin):
     ordering = ("-created_at", "-total_price")
     readonly_fields  = ("created_at",)
     list_per_page = 20
+    inlines = [TicketInline,]
 
     def get_queryset(self, request):
         return (
@@ -157,6 +178,7 @@ class TicketAdmin(admin.ModelAdmin):
             )
         )
 
+
 @admin.register(Route)
 class AdminRoute(admin.ModelAdmin):
     list_display = ("id", "source", "destination", "distance")
@@ -167,4 +189,3 @@ class AdminRoute(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("source", "destination")
-
