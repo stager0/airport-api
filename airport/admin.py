@@ -50,3 +50,11 @@ class FlightAdmin(admin.ModelAdmin):
         "price_economy"
         )
     ordering = ("-departure_time",)
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ("id", "created_at", "user", "total_price")
+    list_filter = ("total_price", "created_at")
+    search_fields = ("total_price", "created_at")
+    ordering = ("-created_at",)
+    readonly_fields  = ("created_at",)
