@@ -1,6 +1,13 @@
-from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema, OpenApiParameter, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiResponse,
+    extend_schema,
+    OpenApiParameter,
+    extend_schema_view
+)
 
 from airport.serializers import SnacksAndDrinksSerializer
+
 
 snacks_and_drinks_schema = extend_schema_view(
     list=extend_schema(

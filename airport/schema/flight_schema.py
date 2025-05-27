@@ -1,8 +1,24 @@
-from drf_spectacular.utils import OpenApiResponse, extend_schema, OpenApiExample, OpenApiParameter, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+    OpenApiExample,
+    OpenApiParameter,
+    extend_schema_view
+)
 
-from airport.example_swagger_dicts.dicts_flight_examples import dict_create_example, dict_retrieve_example, \
-    errors_when_there_are_not_fields_provided, dict_flight_list_example, dict_flight_update_empty_example
-from airport.serializers import FlightSerializer, FlightRetrieveSerializer, FlightListSerializer
+from airport.example_swagger_dicts.dicts_flight_examples import (
+    dict_create_example,
+    dict_retrieve_example,
+    errors_when_there_are_not_fields_provided,
+    dict_flight_list_example,
+    dict_flight_update_empty_example
+)
+from airport.serializers import (
+    FlightSerializer,
+    FlightRetrieveSerializer,
+    FlightListSerializer
+)
+
 
 flight_schema = extend_schema_view(
     list=extend_schema(

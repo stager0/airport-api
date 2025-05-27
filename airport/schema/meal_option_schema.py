@@ -1,4 +1,10 @@
-from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema, OpenApiParameter, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiResponse,
+    extend_schema,
+    OpenApiParameter,
+    extend_schema_view
+)
 
 from airport.serializers import MealOptionSerializer
 

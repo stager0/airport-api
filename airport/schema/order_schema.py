@@ -1,7 +1,14 @@
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema, extend_schema_view
 
-from airport.example_swagger_dicts.dict_order_retrieve_example import example_order_retrieve_dict
-from airport.serializers import OrderRetrieveSerializer, OrderSerializer, OrderListSerializer
+from airport.example_swagger_dicts.dict_order_retrieve_example import (
+    example_order_retrieve_dict
+)
+from airport.serializers import (
+    OrderRetrieveSerializer,
+    OrderSerializer,
+    OrderListSerializer
+)
+
 
 order_schema = extend_schema_view(
     list=extend_schema(

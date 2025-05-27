@@ -1,6 +1,13 @@
-from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema, OpenApiParameter, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiResponse,
+    extend_schema,
+    OpenApiParameter,
+    extend_schema_view
+)
 
 from airport.serializers import CrewSerializer
+
 
 crew_schema = extend_schema_view(
     list=extend_schema(

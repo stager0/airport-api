@@ -1,6 +1,16 @@
-from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiResponse, OpenApiParameter, OpenApiExample
+from drf_spectacular.utils import (
+    extend_schema_view,
+    extend_schema,
+    OpenApiResponse,
+    OpenApiParameter,
+    OpenApiExample
+)
 
-from airport.serializers import RouteListSerializer, RouteSerializer
+from airport.serializers import (
+    RouteListSerializer,
+    RouteSerializer
+)
+
 
 route_schema = extend_schema_view(
     list=extend_schema(

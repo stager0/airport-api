@@ -1,6 +1,12 @@
-from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view
+)
 
 from airport.serializers import DiscountCouponSerializer
+
 
 discount_coupon_schema = extend_schema_view(
     list=extend_schema(
