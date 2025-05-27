@@ -22,9 +22,11 @@ from airport.models import (
     Order, DiscountCoupon
 )
 from airport.permissions import IsAdminOrIsAuthenticatedReadOnly
+from airport.schema.airplane_schema import airplane_schema
+from airport.schema.airplane_type_schema import airport_type_schema
 from airport.schema.airport_schema import airport_schema
 from airport.schema.crew_schema import crew_schema
-from airport.schema.extra_entertainment_and_comfort_schema import extra_entertainment_and_comfort
+from airport.schema.extra_entertainment_and_comfort_schema import extra_entertainment_and_comfort_schema
 from airport.schema.meal_option_schema import meal_option_schema
 from airport.schema.snacks_and_drinks_schema import snacks_and_drinks_schema
 from airport.serializers import (
@@ -157,59 +159,7 @@ class CrewViewSet(
         return queryset.distinct()
 
 
-@extend_schema_view(
-    list=extend_schema(
-        summary="Get a list of all Airplane Types",
-        description="Retrieve a list of all Airplane Types (owned by the company)",
-        tags=["airplane_type"],
-        request=AirplaneTypeSerializer,
-        responses={
-            200: AirplaneTypeSerializer(many=True),
-            401: OpenApiResponse(description="Authentication credentials were not provided")
-        },
-        examples=[
-            OpenApiExample(
-                "Item from AirplaneType List Example",
-                value={
-                    "id": 1,
-                    "name": "Boeing 777"
-                },
-                response_only=True
-            )
-        ]
-    ),
-    create=extend_schema(
-        summary="Create an Airplane Type",
-        description="Creates an Airplane Type with provided name",
-        tags=["airplane_type"],
-        request=AirplaneType,
-        responses={
-            201: AirplaneType,
-            401: OpenApiResponse(description="Authentication credentials were not provided"),
-            400: OpenApiResponse(
-                description="Bad Request",
-                examples=[
-                    OpenApiExample(
-                        "Empty Airplane Name",
-                        value={
-                            "name": ["This field may not be blank."]
-                        },
-                        status_codes=["400"]
-                    )
-                ]
-            )
-        },
-        examples=[
-            OpenApiExample(
-                "Create new Airplane Type",
-                value={
-                    "name": "Boeing",
-                },
-                request_only=True
-            )
-        ]
-    ),
-)
+@airport_type_schema
 class AirplaneTypeViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
@@ -220,68 +170,7 @@ class AirplaneTypeViewSet(
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
 
 
-@extend_schema_view(
-    list=extend_schema(
-        summary="Get a list of all Airplanes",
-        description="Retrieve a list of all Airplanes in format (name, rows, letters_in_row, airplane_type)",
-        tags=["airplane"],
-        request=AirplaneSerializer,
-        responses={
-            200: AirplaneSerializer(many=True),
-            401: OpenApiResponse(description="Authentication credentials were not provided")
-        },
-        examples=[
-            OpenApiExample(
-                "Item from Airplane List Example",
-                value={
-                    "id": 1,
-                    "name": "Sky Explorer",
-                    "rows": 30,
-                    "letters_in_row": "ABCDEF",
-                    "airplane_type": 1
-                },
-                response_only=True
-            )
-        ]
-    ),
-    create=extend_schema(
-        summary="Create an Airplane",
-        description="Creates an Airplane with provided data (name, rows, letters_in_row, airplane_type(pk))",
-        tags=["airplane"],
-        request=AirplaneSerializer,
-        responses={
-            201: AirplaneSerializer,
-            401: OpenApiResponse(description="Authentication credentials were not provided"),
-            400: OpenApiResponse(
-                description="Bad Request",
-                examples=[
-                    OpenApiExample(
-                        "Empty name, rows, letters_on_row, airplane_type",
-                        value={
-                            "name": ["This field may not be blank."],
-                            "rows": ["A valid integer is required."],
-                            "letters_in_row": ["This field may not be blank."],
-                            "airplane_type": ["This field may not be null."]
-                        },
-                        status_codes=["400"]
-                    )
-                ]
-            )
-        },
-        examples=[
-            OpenApiExample(
-                "Create a new Airplane",
-                value={
-                    "name": "Sky Explorer Turbo",
-                    "rows": 25,
-                    "letters_in_row": "ABCDE",
-                    "airplane_type": 1
-                },
-                request_only=True
-            )
-        ]
-    )
-)
+@airplane_schema
 class AirplaneViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
