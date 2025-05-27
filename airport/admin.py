@@ -20,12 +20,10 @@ admin.site.register(Airplane)
 admin.site.register(Airport)
 admin.site.register(Route)
 admin.site.register(Crew)
-admin.site.register(Order)
 admin.site.register(SnacksAndDrinks)
 admin.site.register(MealOption)
 admin.site.register(ExtraEntertainmentAndComfort)
 admin.site.register(DiscountCoupon)
-admin.site.register(Ticket)
 
 @admin.register(Flight)
 class FlightAdmin(admin.ModelAdmin):
@@ -58,3 +56,32 @@ class OrderAdmin(admin.ModelAdmin):
     search_fields = ("total_price", "created_at")
     ordering = ("-created_at",)
     readonly_fields  = ("created_at",)
+
+@admin.register(Ticket)
+class TicketAdmin(admin.ModelAdmin):
+    list_display = (
+        "row",
+        "letter",
+        "discount",
+        "has_luggage",
+        "luggage_weight",
+        "flight",
+        "order",
+        "price",
+        "meal_option",
+        "extra_entertainment_and_comfort",
+        "snacks_and_drinks",
+        "is_business",
+        "discount_coupon"
+    )
+    list_filter = (
+        "has_luggage",
+        "flight",
+        "order",
+        "price",
+        "is_business",
+        "discount_coupon__code"
+    )
+    search_fields = ("discount_coupon__code", "discount")
+    ordering = ("-order__created_at",)
+    readonly_fields = ("discount",)
