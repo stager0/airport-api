@@ -120,7 +120,11 @@ class FlightSerializer(serializers.ModelSerializer):
             "arrival_time",
             "route",
             "airplane",
-            "crew"
+            "crew",
+            "price_economy",
+            "price_business",
+            "rows_economy_from",
+            "luggage_price_1_kg"
         )
 
 
@@ -225,7 +229,6 @@ class TicketSerializer(serializers.ModelSerializer):
             "has_luggage",
             "flight",
             "order",
-            "price",
             "meal_option",
             "extra_entertainment_and_comfort",
             "snacks_and_drinks",
