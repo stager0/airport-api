@@ -95,22 +95,21 @@ class Flight(models.Model):
     )
     airplane = models.ForeignKey(
         Airplane,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name="flights",
-        null=True
     )
-    departure_time = models.DateTimeField(blank=True, null=True)
-    arrival_time = models.DateTimeField(blank=True, null=True)
+    departure_time = models.DateTimeField()
+    arrival_time = models.DateTimeField()
     crew = models.ManyToManyField(
         Crew,
         related_name="flights"
     )
-    price_economy = models.IntegerField(null=True, blank=True)
-    price_business = models.IntegerField(null=True, blank=True)
+    price_economy = models.IntegerField()
+    price_business = models.IntegerField()
     # if economy rows are from 11 it means that 1-10 rows are business class
     # (and the rest are economy to end of airplane's rows)
-    rows_economy_from = models.IntegerField(null=True, blank=True)
-    luggage_price_1_kg = models.DecimalField(decimal_places=2, max_digits=8, null=True)
+    rows_economy_from = models.IntegerField()
+    luggage_price_1_kg = models.DecimalField(decimal_places=2, max_digits=8)
 
     class Meta:
         ordering = ["departure_time"]
