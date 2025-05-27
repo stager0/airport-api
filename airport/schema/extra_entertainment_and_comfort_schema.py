@@ -3,7 +3,7 @@ from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from airport.serializers import ExtraEntertainmentAndComfortSerializer
 
 
-extra_entertainment_and_comfort = extend_schema_view(
+extra_entertainment_and_comfort_schema = extend_schema_view(
     list=extend_schema(
         summary="Get all from Extra Entertainment and Comfort",
         description="Retrieve a list with all Extra Entertainment and Comfort items",
