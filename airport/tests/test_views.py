@@ -1,3 +1,5 @@
+from http.client import responses
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -106,3 +108,8 @@ class AirportApiTests(BaseCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Odessa")
+
+    def test_create_without_is_staff_status_403(self):
+        response = self.client.post(self.list_url, {"name": "Krymea International Airport", "closest_big_city": "Krymea"})
+
+        self.assertEqual(response.status_code, 403)
