@@ -74,3 +74,14 @@ class AirplaneApiTests(BaseCase):
             "airplane_type": self.airplane_type
         })
         self.assertEqual(response.status_code, 403)
+
+    def test_create_when_user_is_staff_status_201(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
+        response = self.client.post(self.list_url, {
+            "name": "test1",
+            "rows": 21,
+            "letters_in_row": "ABCD",
+            "airplane_type": self.airplane_type.id
+        }, format="json")
+
+        self.assertEqual(response.status_code, 201)
