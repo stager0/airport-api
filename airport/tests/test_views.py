@@ -12,7 +12,7 @@ from airport.models import AirplaneType, Airplane
 class BaseCase(TestCase):
     def setUp(self):
         self.airplane_type = AirplaneType.objects.create(name="Passage")
-        self.airplane = Airplane.objects.create(name="Boeing", rows=199, letters_in_row="ABCDEFGH", airplane_type=self.airplane_type)
+        self.airplane = Airplane.objects.create(name="Boeing", rows=10, letters_in_row="ABCDEFGH", airplane_type=self.airplane_type)
         self.user = get_user_model().objects.create_user(
             email="test_email@test.com",
             first_name="Vasyl",
@@ -85,3 +85,10 @@ class AirplaneApiTests(BaseCase):
         }, format="json")
 
         self.assertEqual(response.status_code, 201)
+
+    def test_properties_capacity_list_of_seats_seats_in_row_count(self):
+        airplane = self.airplane
+
+        self.assertEqual(airplane.capacity, 80)
+        self.assertEqual(airplane.list_of_seats, ["A", "B", "C", "D", "E", "F", "G", "H"])
+        self.assertEqual(airplane.seats_in_row_count, 8)
