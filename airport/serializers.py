@@ -85,7 +85,13 @@ class AirportSourceAndDestinationOnlyCitySerializer(serializers.ModelSerializer)
 class CrewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Crew
-        fields = ("id", "first_name", "last_name", "position")
+        fields = ("id", "first_name", "last_name", "position", "image")
+
+
+class CrewImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Crew
+        fields = ("id", "image")
 
 
 class AirplaneTypeSerializer(serializers.ModelSerializer):
