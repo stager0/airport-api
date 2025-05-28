@@ -1,0 +1,41 @@
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+from django.urls import reverse
+from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from airport.models import AirplaneType
+
+def sample_airplane_type(**params):
+    defaults = {
+        "name": "Passage"
+    }
+    defaults.update(**params)
+    return AirplaneType.objects.create(**defaults)
+
+
+class BaseCase(TestCase):
+    def setUp(self):
+        self.airplane_type = sample_airplane_type()
+        self.user = get_user_model().objects.create_user(
+            email="test_email@test.com",
+            first_name="Vasyl",
+            last_name="Muller",
+            password="1qazcde3"
+        )
+        refresh = RefreshToken.for_user(self.user)
+        self.access_token = str(refresh.access_token)
+        self.client = APIClient()
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.access_token)
+
+
+class AirplaneTypeApiTests(BaseCase):
+    def setUp(self):
+        super().setUp()
+        self.list_url = reverse("airport:airplanetype-list")
+
+    def test_airplane_type_list(self):
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Passage", 1)
