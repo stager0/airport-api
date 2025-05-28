@@ -64,6 +64,12 @@ class ExtraEntertainmentAndComfortSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "price", "image")
 
 
+class ExtraEntertainmentAndComfortImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExtraEntertainmentAndComfortSerializer
+        fields = ("id", "image")
+
+
 class AirportSerializer(serializers.ModelSerializer):
     class Meta:
         model = Airport
