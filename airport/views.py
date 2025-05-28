@@ -40,8 +40,16 @@ from airport.serializers import (
     AirplaneSerializer,
     RouteSerializer,
     FlightSerializer,
-    OrderSerializer, RouteListSerializer, FlightListSerializer, FlightRetrieveSerializer, OrderListSerializer,
-    OrderRetrieveSerializer, DiscountCouponSerializer, MealOptionImageSerializer, SnacksAndDrinksImageSerializer,
+    OrderSerializer,
+    RouteListSerializer,
+    FlightListSerializer,
+    FlightRetrieveSerializer,
+    OrderListSerializer,
+    OrderRetrieveSerializer,
+    DiscountCouponSerializer,
+    MealOptionImageSerializer,
+    SnacksAndDrinksImageSerializer,
+    CrewImageSerializer,
 )
 
 
@@ -166,7 +174,8 @@ class AirportViewSet(
 class CrewViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
-    GenericViewSet
+    GenericViewSet,
+    UploadImageMixin
 ):
     queryset = Crew.objects.all()
     serializer_class = CrewSerializer
@@ -186,6 +195,11 @@ class CrewViewSet(
             queryset = queryset.filter(position__icontains=position)
 
         return queryset.distinct()
+
+    def get_serializer_class(self):
+        if self.action == "upload_image":
+            return CrewImageSerializer
+        return CrewSerializer
 
 
 @airport_type_schema
