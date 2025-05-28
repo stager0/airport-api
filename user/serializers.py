@@ -20,6 +20,7 @@ class UserSerializer(serializers.ModelSerializer):
             user.save()
         return user
 
+
 class UserOnlyIdAndNameSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
