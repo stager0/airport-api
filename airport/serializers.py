@@ -1,4 +1,5 @@
 from decimal import Decimal, ROUND_HALF_UP
+from django.utils import timezone
 
 from django.db import transaction
 from rest_framework import serializers
@@ -54,7 +55,7 @@ class ExtraEntertainmentAndComfortSerializer(serializers.ModelSerializer):
 class AirportSerializer(serializers.ModelSerializer):
     class Meta:
         model = Airport
-        fields = ("id", "name", "closest_big_city", "image")
+        fields = ("id", "name", "closest_big_city")
 
 
 class AirportSourceAndDestinationOnlyCitySerializer(serializers.ModelSerializer):
@@ -320,7 +321,7 @@ class OrderSerializer(serializers.ModelSerializer):
                     except DiscountCoupon.DoesNotExist:
                         pass
 
-                if coupon_object:
+                if coupon_object and coupon_object.valid_until > timezone.now():
                     ticket = Ticket.objects.create(order=order, meal_option=meal_option, discount_coupon=coupon_object, **ticket_data)
                 else:
                     ticket = Ticket.objects.create(order=order, meal_option=meal_option, **ticket_data)
@@ -350,13 +351,14 @@ class OrderSerializer(serializers.ModelSerializer):
                 for snack in snacks_drinks:
                     ticket_price += snack.price
 
-                if coupon_object:
+                if coupon_object and coupon_object.valid_until > timezone.now():
                     discount = coupon_object.discount
                     ticket_price *= Decimal(1 - discount / 100)
                     ticket.discount = discount
 
-                if not coupon_object and ticket.discount > 0:
+                if not coupon_object or ticket.discount <= 0 or coupon_object.valid_until < timezone.now():
                     ticket.discount = 0
+                    ticket.discount_coupon = None
 
                 total_price += ticket_price
                 ticket.price = Decimal(total_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
