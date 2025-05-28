@@ -65,3 +65,12 @@ class AirplaneApiTests(BaseCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Boeing", 1)
+
+    def test_create_airplane_without_is_staff_status_403(self):
+        response =self.client.post(self.list_url, {
+            "name": "test",
+            "rows": 22,
+            "letters_in_row": "ABC",
+            "airplane_type": self.airplane_type
+        })
+        self.assertEqual(response.status_code, 403)
