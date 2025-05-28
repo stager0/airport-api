@@ -41,7 +41,7 @@ from airport.serializers import (
     RouteSerializer,
     FlightSerializer,
     OrderSerializer, RouteListSerializer, FlightListSerializer, FlightRetrieveSerializer, OrderListSerializer,
-    OrderRetrieveSerializer, DiscountCouponSerializer,
+    OrderRetrieveSerializer, DiscountCouponSerializer, MealOptionImageSerializer,
 )
 
 
@@ -50,7 +50,7 @@ class UploadImageMixin:
         methods=["POST"],
         detail=True,
         url_path="upload-image",
-        permission_classes = [IsAdminUser]
+        permission_classes=[IsAdminUser]
     )
     def upload_image(self, request, pk=None):
         obj = self.get_object()
@@ -66,6 +66,7 @@ class MealOptionViewSet(
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
     GenericViewSet,
+    UploadImageMixin
 ):
     queryset = MealOption.objects.all()
     serializer_class = MealOptionSerializer
@@ -85,6 +86,11 @@ class MealOptionViewSet(
             queryset = queryset.filter(meal_type=meal_type)
 
         return queryset.distinct()
+
+    def get_serializer_class(self):
+        if self.action == "upload_image":
+            return MealOptionImageSerializer
+        return MealOptionSerializer
 
 
 @snacks_and_drinks_schema
@@ -331,7 +337,6 @@ class OrderViewSet(
                 "tickets__flight__airplane"
             )
         return queryset
-
 
     def get_serializer_class(self):
         if self.action == "retrieve":
