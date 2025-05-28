@@ -29,24 +29,6 @@ class TicketInline(admin.TabularInline):
     extra = 0
     readonly_fields = ("discount",)
 
-    def get_queryset(self, request):
-        return (
-            super().get_queryset(request)
-            .select_related(
-                "flight",
-                "flight__route",
-                "flight__route__source",
-                "flight__route__destination",
-                "order",
-                "meal_option",
-                "discount_coupon"
-            )
-            .prefetch_related(
-                "extra_entertainment_and_comfort",
-                "snacks_and_drinks"
-            )
-        )
-
 
 @admin.register(Flight)
 class FlightAdmin(admin.ModelAdmin):
@@ -150,6 +132,7 @@ class TicketAdmin(admin.ModelAdmin):
     search_fields = ("discount_coupon__code", "discount", "flight__route__source__name")
     ordering = ("-order__created_at",)
     readonly_fields = ("discount",)
+    raw_id_fields = ("flight",)
     list_per_page = 20
 
     @admin.display(description="ExtraEntertainmentAndComfort")
