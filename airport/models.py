@@ -6,11 +6,15 @@ from django.db import models
 from airport.validators import validate_discount_coupon_code
 
 
+def create_custom_path(instance, filename):
+    pass
+
+
 class AirplaneType(models.Model):
     name = models.CharField(max_length=255, unique=True)
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
 
 class Airplane(models.Model):
@@ -22,6 +26,7 @@ class Airplane(models.Model):
         on_delete=models.CASCADE,
         related_name="airplanes",
     )
+    image = models.ImageField(null=True, blank=True, upload_to="#") #---------------> TO DO
 
     @property
     def capacity(self) -> int:
@@ -36,7 +41,7 @@ class Airplane(models.Model):
         return len(self.letters_in_row)
 
     def __str__(self):
-        return self.name
+        return f"{self.name}, rows: {self.rows}, letters in row: {self.letters_in_row}"
 
 
 class Airport(models.Model):
@@ -44,7 +49,7 @@ class Airport(models.Model):
     closest_big_city = models.CharField(max_length=255)
 
     def __str__(self):
-        return f"{self.name} ({self.closest_big_city})"
+        return f"{self.name} city: ({self.closest_big_city})"
 
 
 class Route(models.Model):
@@ -61,7 +66,8 @@ class Route(models.Model):
     distance = models.IntegerField(validators=[MaxValueValidator(9999)])
 
     def __str__(self):
-        return f"Source ID: {self.source_id} ---> Destination ID: {self.destination_id}"
+        return (f"Source: {self.source.name} ({self.source.closest_big_city}) "
+                f"-> Destination: {self.destination.name} ({self.destination.closest_big_city})")
 
 
 class Crew(models.Model):
@@ -74,6 +80,7 @@ class Crew(models.Model):
     first_name = models.CharField(max_length=125)
     last_name = models.CharField(max_length=125)
     position = models.CharField(max_length=50, choices=POSITIONS_CHOICES)
+    image = models.ImageField(null=True, blank=True, upload_to="#")
 
     def __str__(self):
         return (
@@ -115,7 +122,7 @@ class Flight(models.Model):
         ordering = ["departure_time"]
 
     def __str__(self):
-        return self.route
+        return f"{self.route.source.name} -> {self.route.destination.name}"
 
 
 class Order(models.Model):
@@ -131,15 +138,16 @@ class Order(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return self.created_at
+        return str(self.created_at)
 
 
 class SnacksAndDrinks(models.Model):
     name = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=8, decimal_places=2)
+    image = models.ImageField(null=True, blank=True, upload_to="#")  #-----------------------> TO DO
 
     def __str__(self):
-        return self.name
+        return f"{self.name}, PRICE={self.price}$"
 
 
 class MealOption(models.Model):
@@ -157,9 +165,10 @@ class MealOption(models.Model):
     )
     weight = models.IntegerField(blank=True, null=True)
     price = models.DecimalField(max_digits=6, decimal_places=2)
+    image = models.ImageField(nul=True, blank=True, upload_to="#")  #-----------------------> TO DO
 
     def __str__(self):
-        return self.get_meal_type_display()
+        return f"Name: {self.name}, type: {self.get_meal_type_display()}, weight: {self.weight}, PRICE={self.price}$"
 
 
 class ExtraEntertainmentAndComfort(models.Model):
@@ -167,9 +176,10 @@ class ExtraEntertainmentAndComfort(models.Model):
         max_length= 55,
     )
     price = models.DecimalField(max_digits=8, decimal_places=2)
+    image = models.ImageField(null=True, blank=True, upload_to="#")  #-----------------------> TO DO
 
     def __str__(self):
-        return f"{self.name} -> {self.price}"
+        return f"{self.name} -> {self.price}$"
 
 
 # for example "new year discount 5%" etc.
