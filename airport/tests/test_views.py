@@ -60,6 +60,7 @@ class AirplaneTypeApiTests(BaseCase):
 
         self.assertEqual(response.status_code, 201)
 
+
 class AirplaneApiTests(BaseCase):
     def setUp(self):
         super().setUp()
@@ -91,12 +92,16 @@ class AirplaneApiTests(BaseCase):
 
         self.assertEqual(response.status_code, 201)
 
+    def test_airplane_str(self):
+        self.assertEqual(str(self.airplane), "Boeing, rows: 10, letters in row: ABCDEFGH")
+
     def test_properties_capacity_list_of_seats_seats_in_row_count_return_without_mistakes(self):
         airplane = self.airplane
 
         self.assertEqual(airplane.capacity, 80)
         self.assertEqual(airplane.list_of_seats, ["A", "B", "C", "D", "E", "F", "G", "H"])
         self.assertEqual(airplane.seats_in_row_count, 8)
+
 
 class AirportApiTests(BaseCase):
     def setUp(self):
@@ -109,7 +114,16 @@ class AirportApiTests(BaseCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Odessa")
 
+    def test_airport_str(self):
+        self.assertEqual(str(self.airport), "International Airport Odessa, city: (Odessa)")
+
     def test_create_without_is_staff_status_403(self):
         response = self.client.post(self.list_url, {"name": "Krymea International Airport", "closest_big_city": "Krymea"})
 
         self.assertEqual(response.status_code, 403)
+
+    def test_airport_create_when_user_is_staff_status_201(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
+        response = self.client.post(self.list_url, {"name": "Krymea International Airport", "closest_big_city": "Krymea"}, format="json")
+
+        self.assertEqual(response.status_code, 201)
