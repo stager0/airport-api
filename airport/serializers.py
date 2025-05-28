@@ -52,6 +52,12 @@ class SnacksAndDrinksSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "price", "image")
 
 
+class SnacksAndDrinksImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SnacksAndDrinks
+        fields = ("id", "image")
+
+
 class ExtraEntertainmentAndComfortSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExtraEntertainmentAndComfort
