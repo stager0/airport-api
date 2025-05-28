@@ -49,7 +49,7 @@ from airport.serializers import (
     DiscountCouponSerializer,
     MealOptionImageSerializer,
     SnacksAndDrinksImageSerializer,
-    CrewImageSerializer,
+    CrewImageSerializer, ExtraEntertainmentAndComfortImageSerializer,
 )
 
 
@@ -131,7 +131,8 @@ class SnacksAndDrinksViewSet(
 class ExtraEntertainmentAndComfortViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
-    GenericViewSet
+    GenericViewSet,
+    UploadImageMixin
 ):
     queryset = ExtraEntertainmentAndComfort.objects.all()
     serializer_class = ExtraEntertainmentAndComfortSerializer
@@ -145,6 +146,11 @@ class ExtraEntertainmentAndComfortViewSet(
             queryset = queryset.filter(name__icontains=name)
 
         return queryset.distinct()
+
+    def get_serializer_class(self):
+        if self.action == "upload_image":
+            return ExtraEntertainmentAndComfortImageSerializer
+        return ExtraEntertainmentAndComfortSerializer
 
 
 @airport_schema
