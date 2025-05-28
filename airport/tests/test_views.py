@@ -147,6 +147,10 @@ class RouteApiTest(BaseCase):
                                           "-> Destination: International Airport Lviv (Lviv)")
 
     def test_create_route_when_is_staff_false_status_403(self):
-        response = self.client.post(self.list_url, {"source": self.airport, "destination": self.airport1, "distance": 999})
+        response = self.client.post(self.list_url, {"source": self.airport, "destination": self.airport1, "distance": 999}, format="json")
 
         self.assertEqual(response.status_code, 403)
+
+    def test_create_route_when_user_is_staff_status_201(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
+        response = self.client.post(self.list_url, {"source": self.airport, "destination": self.airport1, "distance": 999}, format="json")
