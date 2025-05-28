@@ -141,3 +141,12 @@ class RouteApiTest(BaseCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Lviv")
+
+    def test_route_str(self):
+        self.assertEqual(str(self.route), "Source: International Airport Odessa (Odessa) "
+                                          "-> Destination: International Airport Lviv (Lviv)")
+
+    def test_create_route_when_is_staff_false_status_403(self):
+        response = self.client.post(self.list_url, {"source": self.airport, "destination": self.airport1, "distance": 999})
+
+        self.assertEqual(response.status_code, 403)
