@@ -1,7 +1,9 @@
 from django.db.models import Count, F, Q
 from django.db.models.functions import Length
-from rest_framework import mixins, viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import mixins, viewsets, status
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from airport.models import (
@@ -43,11 +45,27 @@ from airport.serializers import (
 )
 
 
+class UploadImageMixin:
+    @action(
+        methods=["POST"],
+        detail=True,
+        url_path="upload-image",
+        permission_classes = [IsAdminUser]
+    )
+    def upload_image(self, request, pk=None):
+        obj = self.get_object()
+        serializer = self.get_serializer_class(obj, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(data=serializer.data, status=status.HTTP_200_OK)
+        return Response(data=serializer.data, status=status.HTTP_400_BAD_REQUEST)
+
+
 @meal_option_schema
 class MealOptionViewSet(
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
-    GenericViewSet
+    GenericViewSet,
 ):
     queryset = MealOption.objects.all()
     serializer_class = MealOptionSerializer
@@ -287,15 +305,33 @@ class OrderViewSet(
 
     def get_queryset(self):
         queryset = self.queryset.filter(user=self.request.user)
-        if self.action == "retrieve":
+
+        if self.action == "list":
+            return queryset.prefetch_related(
+                "tickets",
+                "tickets__flight",
+                "tickets__flight__route",
+                "tickets__flight__route__source",
+                "tickets__flight__route__destination",
+                "tickets__extra_entertainment_and_comfort",
+                "tickets__snacks_and_drinks",
+                "tickets__meal_option",
+                "tickets__discount_coupon",
+                "tickets__flight__airplane"
+            )
+
+        elif self.action == "retrieve":
             return queryset.prefetch_related(
                 "tickets__flight__route__source",
                 "tickets__flight__route__destination",
                 "tickets__extra_entertainment_and_comfort",
                 "tickets__snacks_and_drinks",
-                "tickets__meal_option"
+                "tickets__meal_option",
+                "tickets__discount_coupon",
+                "tickets__flight__airplane"
             )
         return queryset
+
 
     def get_serializer_class(self):
         if self.action == "retrieve":
