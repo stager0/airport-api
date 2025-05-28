@@ -9,7 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from airport.models import (
     AirplaneType,
     Airplane,
-    Airport
+    Airport, Route
 )
 
 
@@ -18,6 +18,8 @@ class BaseCase(TestCase):
         self.airplane_type = AirplaneType.objects.create(name="Passage")
         self.airplane = Airplane.objects.create(name="Boeing", rows=10, letters_in_row="ABCDEFGH", airplane_type=self.airplane_type)
         self.airport = Airport.objects.create(name="International Airport Odessa", closest_big_city="Odessa")
+        self.airport1 = Airport.objects.create(name="International Airport Lviv", closest_big_city="Lviv")
+        self.route = Route.objects.create(source=self.airport, destination=self.airport1, distance=920)
         self.user = get_user_model().objects.create_user(
             email="test_email@test.com",
             first_name="Vasyl",
@@ -127,3 +129,15 @@ class AirportApiTests(BaseCase):
         response = self.client.post(self.list_url, {"name": "Krymea International Airport", "closest_big_city": "Krymea"}, format="json")
 
         self.assertEqual(response.status_code, 201)
+
+
+class RouteApiTest(BaseCase):
+    def setUp(self):
+        super().setUp()
+        self.list_url = reverse("airport:route-list")
+
+    def test_route_list_status_200_and_contains_value(self):
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Lviv")
