@@ -49,7 +49,7 @@ from airport.serializers import (
     DiscountCouponSerializer,
     MealOptionImageSerializer,
     SnacksAndDrinksImageSerializer,
-    CrewImageSerializer, ExtraEntertainmentAndComfortImageSerializer,
+    CrewImageSerializer, ExtraEntertainmentAndComfortImageSerializer, AirplaneImageSerializer,
 )
 
 
@@ -223,11 +223,17 @@ class AirplaneTypeViewSet(
 class AirplaneViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
-    GenericViewSet
+    GenericViewSet,
+    UploadImageMixin
 ):
     queryset = Airplane.objects.all()
     serializer_class = AirplaneSerializer
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
+
+    def get_serializer_class(self):
+        if self.action == "upload_image":
+            return AirplaneImageSerializer
+        return AirplaneSerializer
 
 
 @route_schema
