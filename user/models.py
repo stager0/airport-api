@@ -1,5 +1,5 @@
 from django.apps import apps
-from django.contrib.auth.base_user import BaseUserManager
+from django.contrib.auth.base_user import BaseUserManager as DjangoUserManager
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import AbstractUser
 from django.db import models
@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 
 
 # Create your models here.
-class UserManager(BaseUserManager):
+class UserManager(DjangoUserManager):
     def _create_user_object(self, email, password, **extra_fields):
         if not email:
             raise ValueError("The given email must be set")
