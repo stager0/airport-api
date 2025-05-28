@@ -1,13 +1,22 @@
+import os.path
+import uuid
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils.text import slugify
 
 from airport.validators import validate_discount_coupon_code
 
 
 def create_custom_path(instance, filename):
-    pass
+    _, extension = os.path.splitext(filename)
+    slug = str(instance)[:50]
+    return os.path.join(
+        "uploads/media/",
+        f"{slugify(slug)}-{uuid.uuid4()}{extension}"
+    )
 
 
 class AirplaneType(models.Model):
@@ -26,7 +35,7 @@ class Airplane(models.Model):
         on_delete=models.CASCADE,
         related_name="airplanes",
     )
-    image = models.ImageField(null=True, blank=True, upload_to="#") #---------------> TO DO
+    image = models.ImageField(null=True, blank=True, upload_to=create_custom_path)
 
     @property
     def capacity(self) -> int:
@@ -80,7 +89,7 @@ class Crew(models.Model):
     first_name = models.CharField(max_length=125)
     last_name = models.CharField(max_length=125)
     position = models.CharField(max_length=50, choices=POSITIONS_CHOICES)
-    image = models.ImageField(null=True, blank=True, upload_to="#")
+    image = models.ImageField(null=True, blank=True, upload_to=create_custom_path)
 
     def __str__(self):
         return (
@@ -144,7 +153,7 @@ class Order(models.Model):
 class SnacksAndDrinks(models.Model):
     name = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=8, decimal_places=2)
-    image = models.ImageField(null=True, blank=True, upload_to="#")  #-----------------------> TO DO
+    image = models.ImageField(null=True, blank=True, upload_to=create_custom_path)
 
     def __str__(self):
         return f"{self.name}, PRICE={self.price}$"
@@ -165,7 +174,7 @@ class MealOption(models.Model):
     )
     weight = models.IntegerField(blank=True, null=True)
     price = models.DecimalField(max_digits=6, decimal_places=2)
-    image = models.ImageField(nul=True, blank=True, upload_to="#")  #-----------------------> TO DO
+    image = models.ImageField(null=True, blank=True, upload_to=create_custom_path)
 
     def __str__(self):
         return f"Name: {self.name}, type: {self.get_meal_type_display()}, weight: {self.weight}, PRICE={self.price}$"
@@ -176,7 +185,7 @@ class ExtraEntertainmentAndComfort(models.Model):
         max_length= 55,
     )
     price = models.DecimalField(max_digits=8, decimal_places=2)
-    image = models.ImageField(null=True, blank=True, upload_to="#")  #-----------------------> TO DO
+    image = models.ImageField(null=True, blank=True, upload_to=create_custom_path)
 
     def __str__(self):
         return f"{self.name} -> {self.price}$"
