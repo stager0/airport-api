@@ -100,6 +100,12 @@ class AirplaneSerializer(serializers.ModelSerializer):
         fields =("id", "name", "rows", "letters_in_row", "airplane_type", "image")
 
 
+class AirplaneImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Airplane
+        fields = ("id", "image")
+
+
 class AirplaneWithAirplaneType(AirplaneSerializer):
     airplane_type = AirplaneTypeSerializer(read_only=True)
 
