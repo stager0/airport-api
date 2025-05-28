@@ -6,19 +6,13 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from airport.models import AirplaneType
-
-def sample_airplane_type(**params):
-    defaults = {
-        "name": "Passage"
-    }
-    defaults.update(**params)
-    return AirplaneType.objects.create(**defaults)
+from airport.models import AirplaneType, Airplane
 
 
 class BaseCase(TestCase):
     def setUp(self):
-        self.airplane_type = sample_airplane_type()
+        self.airplane_type = AirplaneType.objects.create(name="Passage")
+        self.airplane = Airplane.objects.create(name="Boeing", rows=199, letters_in_row="ABCDEFGH", airplane_type=self.airplane_type)
         self.user = get_user_model().objects.create_user(
             email="test_email@test.com",
             first_name="Vasyl",
@@ -60,3 +54,14 @@ class AirplaneTypeApiTests(BaseCase):
         response = self.client.post(self.list_url, {"name": "TEST"}, format="json")
 
         self.assertEqual(response.status_code, 201)
+
+class AirplaneApiTests(BaseCase):
+    def setUp(self):
+        super().setUp()
+        self.list_url = reverse("airport:airplane-list")
+
+    def test_airplane_list_200(self):
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Boeing", 1)
