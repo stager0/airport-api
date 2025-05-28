@@ -12,9 +12,10 @@ from airport.validators import validate_discount_coupon_code
 
 def create_custom_path(instance, filename):
     _, extension = os.path.splitext(filename)
+    model_lower = str(instance.__class__.__name__).lower() + "s_media_files"
     slug = str(instance)[:50]
     return os.path.join(
-        "uploads/media/",
+        f"uploads/{model_lower}/",
         f"{slugify(slug)}-{uuid.uuid4()}{extension}"
     )
 

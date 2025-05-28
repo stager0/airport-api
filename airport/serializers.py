@@ -36,25 +36,25 @@ class DiscountOnlyValueAndNameSerializer(serializers.ModelSerializer):
 class MealOptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = MealOption
-        fields = ("id", "name", "meal_type", "weight", "price")
+        fields = ("id", "name", "meal_type", "weight", "price", "image")
 
 
 class SnacksAndDrinksSerializer(serializers.ModelSerializer):
     class Meta:
         model = SnacksAndDrinks
-        fields = ("id", "name", "price")
+        fields = ("id", "name", "price", "image")
 
 
 class ExtraEntertainmentAndComfortSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExtraEntertainmentAndComfort
-        fields = ("id", "name", "price")
+        fields = ("id", "name", "price", "image")
 
 
 class AirportSerializer(serializers.ModelSerializer):
     class Meta:
         model = Airport
-        fields = ("id", "name", "closest_big_city")
+        fields = ("id", "name", "closest_big_city", "image")
 
 
 class AirportSourceAndDestinationOnlyCitySerializer(serializers.ModelSerializer):
@@ -78,7 +78,7 @@ class AirplaneTypeSerializer(serializers.ModelSerializer):
 class AirplaneSerializer(serializers.ModelSerializer):
     class Meta:
         model = Airplane
-        fields =("id", "name", "rows", "letters_in_row", "airplane_type")
+        fields =("id", "name", "rows", "letters_in_row", "airplane_type", "image")
 
 
 class AirplaneWithAirplaneType(AirplaneSerializer):
@@ -112,6 +112,7 @@ class RouteSourceDestinationNamesSerializer(serializers.ModelSerializer):
 
 
 class FlightSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Flight
         fields = (
@@ -299,7 +300,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ("id", "created_at", "total_price", "tickets")
+        fields = ("id", "created_at", "tickets")
 
     def create(self, validated_data):
         with transaction.atomic():
