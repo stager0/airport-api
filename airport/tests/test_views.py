@@ -1,8 +1,11 @@
 from datetime import datetime
+from http.client import responses
 
 from django.contrib.auth import get_user_model
+from django.db.models import Count, F
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.timezone import make_aware
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -13,7 +16,7 @@ from airport.models import (
     Airplane,
     Airport,
     Route,
-    Crew, Flight
+    Crew, Flight, SnacksAndDrinks, MealOption, ExtraEntertainmentAndComfort, DiscountCoupon, Ticket, Order
 )
 from airport.serializers import (
     CrewSerializer,
@@ -21,30 +24,39 @@ from airport.serializers import (
     AirplaneSerializer,
     AirplaneTypeSerializer,
     RouteListSerializer,
-    FlightListSerializer
+    FlightListSerializer, OrderListSerializer
 )
 
 defaults_flight = {
-        "departure_time": make_aware(datetime(2025, 9, 9, 14, 33)),
-        "arrival_time": make_aware(datetime(2025, 9, 9, 18, 27)),
-        "price_economy": 175,
-        "price_business": 280,
-        "rows_economy_from": 4,
-        "luggage_price_1_kg": 1.99
+    "departure_time": make_aware(datetime(2025, 9, 9, 14, 33)),
+    "arrival_time": make_aware(datetime(2025, 9, 9, 18, 27)),
+    "price_economy": 175,
+    "price_business": 280,
+    "rows_economy_from": 4,
+    "luggage_price_1_kg": 1.99
+}
+
+
+def sample_ticket(**params):
+    defaults = {
+        "row": 9,
+        "letter": "A",
+        "has_luggage": True,
+        "luggage_weight": 10,
+        "flight": Flight.objects.first(),
+        "order": Order.objects.create(user=get_user_model().objects.first()),
+        "meal_option": MealOption.objects.first(),
+        "discount_coupon": DiscountCoupon.objects.first()
     }
+    defaults.update(**params)
+    ticket = Ticket.objects.create(**defaults)
+    ticket.extra_entertainment_and_comfort.set([ExtraEntertainmentAndComfort.objects.first().id])
+    ticket.snacks_and_drinks.set([SnacksAndDrinks.objects.first().id])
+    return ticket
 
 
 class BaseCase(TestCase):
     def setUp(self):
-        self.airplane_type = AirplaneType.objects.create(name="Passage")
-        self.airplane = Airplane.objects.create(name="Boeing", rows=10, letters_in_row="ABCDEFGH", airplane_type=self.airplane_type)
-        self.airport = Airport.objects.create(name="International Airport Odessa", closest_big_city="Odessa")
-        self.airport1 = Airport.objects.create(name="International Airport Lviv", closest_big_city="Lviv")
-        self.route = Route.objects.create(source=self.airport, destination=self.airport1, distance=920)
-        self.crew_captain = Crew.objects.create(first_name="Joe" ,last_name="Henrynton", position="CAPTAIN")
-        self.crew_first_officer = Crew.objects.create(first_name="Oleg" ,last_name="Berny", position="FIRST_OFFICER")
-        self.flight = Flight.objects.create(**defaults_flight, route=self.route, airplane=self.airplane)
-        self.flight.crew.set([self.crew_captain, self.crew_first_officer])
         self.user = get_user_model().objects.create_user(
             email="test_email@test.com",
             first_name="Vasyl",
@@ -57,12 +69,35 @@ class BaseCase(TestCase):
             last_name="Grynko",
             password="1qazcde3"
         )
+        self.airplane_type = AirplaneType.objects.create(name="Passage")
+        self.airplane = Airplane.objects.create(name="Boeing", rows=10, letters_in_row="ABCDEFGH",
+                                                airplane_type=self.airplane_type)
+        self.airport = Airport.objects.create(name="International Airport Odessa", closest_big_city="Odessa")
+        self.airport1 = Airport.objects.create(name="International Airport Lviv", closest_big_city="Lviv")
+        self.route = Route.objects.create(source=self.airport, destination=self.airport1, distance=920)
+        self.crew_captain = Crew.objects.create(first_name="Joe", last_name="Henrynton", position="CAPTAIN")
+        self.crew_first_officer = Crew.objects.create(first_name="Oleg", last_name="Berny", position="FIRST_OFFICER")
+        self.flight = Flight.objects.create(**defaults_flight, route=self.route, airplane=self.airplane)
+        self.flight.crew.set([self.crew_captain, self.crew_first_officer])
+        self.snacks_and_drinks = SnacksAndDrinks.objects.create(name="Chips", price=2.99)
+        self.meal_option = MealOption.objects.create(name="Borsch", meal_type=1, weight=300, price=8.99)
+        self.extra = ExtraEntertainmentAndComfort.objects.create(name="Tablet Ipad (45 games)", price=4.99)
+        self.discount_coupon = DiscountCoupon.objects.create(
+            name="Sommer Action",
+            valid_until=make_aware(datetime(2025, 9, 9, 15)),
+            code="SOMMER9999",
+            discount=30,
+        )
+        self.ticket_economy = sample_ticket()
+        self.ticket_business = sample_ticket(**{"row": 1, "order": Order.objects.create(user=self.superuser)})
+
         refresh = RefreshToken.for_user(self.user)
         refresh_super = RefreshToken.for_user(self.superuser)
         self.access_token = str(refresh.access_token)
         self.super_access_token = str(refresh_super.access_token)
         self.client = APIClient()
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.access_token)
+
 
 """
 class AirplaneTypeApiTests(BaseCase):
@@ -230,7 +265,7 @@ class CrewApiTests(BaseCase):
         response = self.client.post(self.list_url, {"first_name": "Joe", "last_name": "Joe", "position": "CAPTAIN"}, format="json")
 
         self.assertEqual(response.status_code, 201)
-"""
+
 
 class FlightApiTests(BaseCase):
     def setUp(self):
@@ -269,3 +304,57 @@ class FlightApiTests(BaseCase):
         }, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+"""
+
+
+class OrderApiTests(BaseCase):
+    def setUp(self):
+        super().setUp()
+        self.list_url = reverse("airport:order-list")
+        self.defaults_ticket_json = {
+            "user": self.user.id,
+            "tickets": [
+                {
+                "row": 9,
+                "letter": "B",
+                "has_luggage": True,
+                "luggage_weight": 10,
+                "flight": self.flight.id,
+                "meal_option": self.meal_option.id,
+                "discount_coupon": self.discount_coupon.id,
+                "extra_entertainment_and_comfort": [self.extra.id],
+                "snacks_and_drinks": [self.snacks_and_drinks.id]
+                }
+            ]
+        }
+
+    def test_order_list_status_200_and_contains_value(self):
+        response = self.client.get(self.list_url)
+        orders = Order.objects.filter(user=self.user).annotate(
+            count_of_tickets=Count(
+                "tickets"
+            ), source=F(
+                "tickets__flight__route__source__closest_big_city"
+            ), destination=F(
+                "tickets__flight__route__destination__closest_big_city"
+            )).order_by("id")
+        serializer = OrderListSerializer(orders, many=True)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, serializer.data)
+
+    def test_order_str(self):
+        order = Order.objects.first()
+        self.assertEqual(str(order), timezone.now().strftime("%Y-%m-%d %H:%M"))
+
+    def test_create_order_when_is_staff_false_status_201(self):
+        response = self.client.post(self.list_url, self.defaults_ticket_json, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_create_order_without_user_status_400(self):
+        default_ticket_json_without_user = self.defaults_ticket_json.update(**{"user": None})
+        response = self.client.post(self.list_url, default_ticket_json_without_user, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
