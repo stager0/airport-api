@@ -5,12 +5,17 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
+from yaml import serialize
 
 from airport.models import (
     AirplaneType,
     Airplane,
-    Airport, Route, Crew
+    Airport,
+    Route,
+    Crew
 )
+from airport.serializers import CrewSerializer, RouteSerializer, AirportSerializer, AirplaneSerializer, \
+    AirplaneTypeSerializer, RouteListSerializer
 
 
 class BaseCase(TestCase):
@@ -49,9 +54,13 @@ class AirplaneTypeApiTests(BaseCase):
 
     def test_airplane_type_list_status_200_and_contains_value(self):
         response = self.client.get(self.list_url)
+        airplane_types = AirplaneType.objects.all()
+
+        serializer = AirplaneTypeSerializer(airplane_types, many=True)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Passage", 1)
+        self.assertEqual(response.data, serializer.data)
 
     def test_airplane_type_create_200(self):
         response = self.client.post(self.list_url, {"name": "TEST"}, format="json")
@@ -72,9 +81,13 @@ class AirplaneApiTests(BaseCase):
 
     def test_airplane_list_status_200_and_contains_value(self):
         response = self.client.get(self.list_url)
+        airplanes = Airplane.objects.all()
+
+        serializer = AirplaneSerializer(airplanes, many=True)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Boeing", 1)
+        self.assertEqual(response.data, serializer.data)
 
     def test_create_airplane_without_is_staff_status_403(self):
         response =self.client.post(self.list_url, {
@@ -99,7 +112,7 @@ class AirplaneApiTests(BaseCase):
     def test_airplane_str(self):
         self.assertEqual(str(self.airplane), "Boeing, rows: 10, letters in row: ABCDEFGH")
 
-    def test_properties_capacity_list_of_seats_seats_in_row_count_return_without_mistakes(self):
+    def test_properties_capacity_and_list_of_seats_and_seats_in_row_count_return_without_mistakes(self):
         airplane = self.airplane
 
         self.assertEqual(airplane.capacity, 80)
@@ -114,9 +127,13 @@ class AirportApiTests(BaseCase):
 
     def test_airport_list_status_200_and_contains_value(self):
         response = self.client.get(self.list_url)
+        airports = Airport.objects.all()
+
+        serializer = AirportSerializer(airports, many=True)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Odessa")
+        self.assertEqual(response.data, serializer.data)
 
     def test_airport_str(self):
         self.assertEqual(str(self.airport), "International Airport Odessa, city: (Odessa)")
@@ -140,9 +157,13 @@ class RouteApiTest(BaseCase):
 
     def test_route_list_status_200_and_contains_value(self):
         response = self.client.get(self.list_url)
+        routes = Route.objects.all()
+
+        serializer = RouteListSerializer(routes, many=True)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Lviv")
+        self.assertEqual(response.data, serializer.data)
 
     def test_route_str(self):
         self.assertEqual(str(self.route), "Source: International Airport Odessa (Odessa) "
@@ -167,15 +188,19 @@ class CrewApiTests(BaseCase):
 
     def test_crew_list_status_200_and_contains_value(self):
         response = self.client.get(self.list_url)
+        crews = Crew.objects.all()
+
+        serializer = CrewSerializer(crews, many=True)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Henrynton")
+        self.assertEqual(response.data, serializer.data)
 
     def test_crew_str(self):
         self.assertEqual(str(self.crew_captain), "Joe Henrynton, Position: Captain")
 
     def test_crew_property_full_name_and_position(self):
-        self.assertEqual(self.crew_captain.full_name_and_position, "Joe Henrynton, Position: Captain ")
+        self.assertEqual(self.crew_captain.full_name_and_position, "Joe Henrynton, Position: Captain")
 
     def test_create_crew_when_is_staff_false_status_403(self):
         response = self.client.post(self.list_url, {"first_name": "Joe", "last_name": "Joe", "position": "CAPTAIN"}, format="json")
