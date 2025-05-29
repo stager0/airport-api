@@ -239,7 +239,7 @@ class TicketSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True
     )
-    discount_coupon = serializers.CharField(required=False)
+    discount_coupon = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     discount = serializers.IntegerField(read_only=True)
 
     def validate(self, attrs):
@@ -327,7 +327,7 @@ class TicketDetailSerializer (serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    tickets = TicketSerializer(many=True, read_only=False, allow_empty=False)
+    tickets = TicketSerializer(many=True, read_only=False)
 
     class Meta:
         model = Order
@@ -345,11 +345,15 @@ class OrderSerializer(serializers.ModelSerializer):
                 meal_option = ticket_data.pop("meal_option")
                 discount_coupon = ticket_data.pop("discount_coupon", None)
                 coupon_object = None
-                if discount_coupon:
+                if discount_coupon is not None:
                     try:
+                        Ticket.validate_discount_coupon(
+                            code=discount_coupon,
+                            error_to_raise=ValidationError
+                        )
                         coupon_object = DiscountCoupon.objects.get(code=discount_coupon)
                     except DiscountCoupon.DoesNotExist:
-                        pass
+                        coupon_object = None
 
                 if coupon_object and coupon_object.valid_until > timezone.now():
                     ticket = Ticket.objects.create(order=order, meal_option=meal_option, discount_coupon=coupon_object, **ticket_data)
@@ -391,7 +395,7 @@ class OrderSerializer(serializers.ModelSerializer):
                     ticket.discount_coupon = None
 
                 total_price += ticket_price
-                ticket.price = Decimal(total_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                ticket.price = Decimal(ticket_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                 ticket.save()
 
             order.total_price = Decimal(total_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
