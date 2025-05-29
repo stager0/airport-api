@@ -336,7 +336,10 @@ class OrderSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         with transaction.atomic():
             tickets_data = validated_data.pop("tickets")
-            order = Order.objects.create(**validated_data)
+            if tickets_data:
+                order = Order.objects.create(**validated_data)
+            else:
+                raise ValidationError("Order must have at least 1 ticket!")
             total_price = 0
 
             for ticket_data in tickets_data:
