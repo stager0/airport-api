@@ -27,7 +27,7 @@ from airport.serializers import (
     AirplaneTypeSerializer,
     RouteListSerializer,
     FlightListSerializer,
-    OrderListSerializer, SnacksAndDrinksSerializer
+    OrderListSerializer, SnacksAndDrinksSerializer, MealOptionSerializer, ExtraEntertainmentAndComfortSerializer
 )
 
 defaults_flight = {
@@ -482,5 +482,80 @@ class SnacksAndDrinksApiTests(BaseCase):
     def test_create_snacks_when_is_staff_true_status_201(self):
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
         response = self.client.post(self.list_url, {"name": "Tuc", "price": 3.99}, format="json")
+
+        self.assertEqual(response.status_code, 201)
+
+
+class MealOptionApiTests(BaseCase):
+    def setUp(self):
+        super().setUp()
+        self.list_url = reverse("airport:mealoption-list")
+
+    def test_meal_option_list_status_200_and_contains_value(self):
+        response = self.client.get(self.list_url)
+        meal_options = MealOption.objects.all()
+
+        serializer = MealOptionSerializer(meal_options, many=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Borsch")
+        self.assertEqual(response.data, serializer.data)
+
+    def test_meal_option_str(self):
+        self.assertEqual(str(self.meal_option),
+            f"Name: {self.meal_option.name},"
+            f" type: {self.meal_option.get_meal_type_display()},"
+            f" weight: {self.meal_option.weight}, "
+            f"PRICE={self.meal_option.price}$"
+        )
+
+    def test_create_meal_option_when_is_staff_false_status_403(self):
+        response = self.client.post(self.list_url, {
+            "name": "Pasta",
+            "meal_type": 1,
+            "price": 19.99,
+            "weight": 300
+        }, format="json")
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_create_meal_option_when_is_staff_true_status_201(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
+        response = self.client.post(self.list_url, {
+            "name": "Pasta",
+            "meal_type": 1,
+            "price": 19.99,
+            "weight": 300
+        }, format="json")
+
+        self.assertEqual(response.status_code, 201)
+
+
+class ExtraEntertainmentAndComfortApiTests(BaseCase):
+    def setUp(self):
+        super().setUp()
+        self.list_url = reverse("airport:extraentertainmentandcomfort-list")
+
+    def test_extra_list_status_200_and_contains_value(self):
+        response = self.client.get(self.list_url)
+        extra = ExtraEntertainmentAndComfort.objects.all()
+
+        serializer = ExtraEntertainmentAndComfortSerializer(extra, many=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Tablet Ipad (45 games)")
+        self.assertEqual(response.data, serializer.data)
+
+    def test_extra_str(self):
+        self.assertEqual(str(self.extra), f"{self.extra.name} -> {self.extra.price}$")
+
+    def test_create_extra_when_is_staff_false_status_403(self):
+        response = self.client.post(self.list_url, {"name": "Pillow", "price": 2.99}, format="json")
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_create_extra_when_is_staff_true_status_201(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
+        response = self.client.post(self.list_url, {"name": "Pillow", "price": 2.99}, format="json")
 
         self.assertEqual(response.status_code, 201)
