@@ -1,3 +1,4 @@
+import copy
 from datetime import datetime
 from http.client import responses
 
@@ -321,7 +322,7 @@ class OrderApiTests(BaseCase):
                 "luggage_weight": 10,
                 "flight": self.flight.id,
                 "meal_option": self.meal_option.id,
-                "discount_coupon": self.discount_coupon.id,
+                "discount_coupon": self.discount_coupon.code,
                 "extra_entertainment_and_comfort": [self.extra.id],
                 "snacks_and_drinks": [self.snacks_and_drinks.id]
                 }
@@ -358,3 +359,45 @@ class OrderApiTests(BaseCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_create_order_without_extra_entertainment_and_snacks_status_201(self):
+        tickets_without_extra_and_snacks = copy.deepcopy(self.defaults_ticket_json)
+        tickets_without_extra_and_snacks["tickets"][0]["extra_entertainment_and_comfort"] = []
+        tickets_without_extra_and_snacks["tickets"][0]["snacks_and_drinks"] = []
+
+        response = self.client.post(self.list_url, tickets_without_extra_and_snacks, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_create_order_ticket_without_meal_option_status_400(self):
+        ticket_dict_without_meal_option = copy.deepcopy(self.defaults_ticket_json)
+        ticket_dict_without_meal_option["tickets"][0]["meal_option"] = None
+
+        response = self.client.post(self.list_url, ticket_dict_without_meal_option, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_order_with_not_available_place_status_400(self):
+        ticket_with_place_out_range = copy.deepcopy(self.defaults_ticket_json)
+        # letters are ABCDEFGH
+        ticket_with_place_out_range["tickets"][0]["letter"] = "Q" # ----> wrong letter
+
+        response = self.client.post(self.list_url, ticket_with_place_out_range, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_with_wrong_validate_coupon_status_400(self):
+        ticket_with_wrong_coupon = copy.deepcopy(self.defaults_ticket_json)
+        ticket_with_wrong_coupon["tickets"][0]["discount_coupon"] = "WRONG COUPON"
+
+        response = self.client.post(self.list_url, ticket_with_wrong_coupon, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_order_without_discount_coupon_status_201(self):
+        ticket_without_coupon = copy.deepcopy(self.defaults_ticket_json)
+        ticket_without_coupon["tickets"][0]["discount_coupon"] = None
+
+        response = self.client.post(self.list_url, ticket_without_coupon, format="json")
+        print(response.data)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
