@@ -5,11 +5,10 @@ from drf_spectacular.utils import (
     extend_schema_view
 )
 
-from airport.models import AirplaneType
 from airport.serializers import AirplaneTypeSerializer
 
 
-airport_type_schema = extend_schema_view(
+airplane_type_schema = extend_schema_view(
     list=extend_schema(
         summary="Get a list of all Airplane Types",
         description="Retrieve a list of all Airplane Types (owned by the company)",
@@ -34,9 +33,9 @@ airport_type_schema = extend_schema_view(
         summary="Create an Airplane Type",
         description="Creates an Airplane Type with provided name",
         tags=["airplane_type"],
-        request=AirplaneType,
+        request=AirplaneTypeSerializer,
         responses={
-            201: AirplaneType,
+            201: AirplaneTypeSerializer,
             401: OpenApiResponse(description="Authentication credentials were not provided"),
             400: OpenApiResponse(
                 description="Bad Request",

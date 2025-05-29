@@ -6,8 +6,7 @@ from drf_spectacular.utils import (
     extend_schema_view
 )
 
-from airport.serializers import MealOptionSerializer
-
+from airport.serializers import MealOptionSerializer, MealOptionImageSerializer
 
 meal_option_schema = extend_schema_view(
     list=extend_schema(
@@ -75,4 +74,14 @@ meal_option_schema = extend_schema_view(
             )
         ]
     ),
+    upload_image=extend_schema(
+        summary="Upload an Image",
+        description="Uploads an Airplane Image",
+        tags=["MealOption"],
+        request=MealOptionImageSerializer,
+        responses={
+            200: MealOptionImageSerializer,
+            403: OpenApiResponse(description="You do not have permission to perform this action."),
+        },
+    )
 )

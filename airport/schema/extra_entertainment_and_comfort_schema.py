@@ -6,8 +6,7 @@ from drf_spectacular.utils import (
     extend_schema_view
 )
 
-from airport.serializers import ExtraEntertainmentAndComfortSerializer
-
+from airport.serializers import ExtraEntertainmentAndComfortSerializer, ExtraEntertainmentAndComfortImageSerializer
 
 extra_entertainment_and_comfort_schema = extend_schema_view(
     list=extend_schema(
@@ -67,5 +66,15 @@ extra_entertainment_and_comfort_schema = extend_schema_view(
                 request_only=True
             )
         ]
+    ),
+    upload_image=extend_schema(
+        summary="Upload an Image",
+        description="Uploads an Airplane Image",
+        tags=["extra_entertainment_and_comfort"],
+        request=ExtraEntertainmentAndComfortImageSerializer,
+        responses={
+            200: ExtraEntertainmentAndComfortImageSerializer,
+            403: OpenApiResponse(description="You do not have permission to perform this action."),
+        },
     )
 )

@@ -6,8 +6,7 @@ from drf_spectacular.utils import (
     extend_schema_view
 )
 
-from airport.serializers import CrewSerializer
-
+from airport.serializers import CrewSerializer, CrewImageSerializer
 
 crew_schema = extend_schema_view(
     list=extend_schema(
@@ -78,5 +77,15 @@ crew_schema = extend_schema_view(
                 request_only=True
             )
         ]
+    ),
+    upload_image=extend_schema(
+        summary="Upload an Image",
+        description="Uploads an Airplane Image",
+        tags=["crew"],
+        request=CrewImageSerializer,
+        responses={
+            200: CrewImageSerializer,
+            403: OpenApiResponse(description="You do not have permission to perform this action."),
+        },
     )
 )
