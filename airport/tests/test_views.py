@@ -1,5 +1,6 @@
 import copy
 from datetime import datetime
+from decimal import Decimal
 from http.client import responses
 
 from django.contrib.auth import get_user_model
@@ -25,7 +26,8 @@ from airport.serializers import (
     AirplaneSerializer,
     AirplaneTypeSerializer,
     RouteListSerializer,
-    FlightListSerializer, OrderListSerializer
+    FlightListSerializer,
+    OrderListSerializer
 )
 
 defaults_flight = {
@@ -84,9 +86,9 @@ class BaseCase(TestCase):
         self.meal_option = MealOption.objects.create(name="Borsch", meal_type=1, weight=300, price=8.99)
         self.extra = ExtraEntertainmentAndComfort.objects.create(name="Tablet Ipad (45 games)", price=4.99)
         self.discount_coupon = DiscountCoupon.objects.create(
-            name="Sommer Action",
+            name="Summer Action",
             valid_until=make_aware(datetime(2025, 9, 9, 15)),
-            code="SOMMER9999",
+            code="SUMMER9999",
             discount=30,
         )
         self.ticket_economy = sample_ticket()
@@ -100,7 +102,6 @@ class BaseCase(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.access_token)
 
 
-"""
 class AirplaneTypeApiTests(BaseCase):
     def setUp(self):
         super().setUp()
@@ -305,8 +306,6 @@ class FlightApiTests(BaseCase):
         }, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-"""
-
 
 class OrderApiTests(BaseCase):
     def setUp(self):
@@ -398,6 +397,58 @@ class OrderApiTests(BaseCase):
         ticket_without_coupon["tickets"][0]["discount_coupon"] = None
 
         response = self.client.post(self.list_url, ticket_without_coupon, format="json")
-        print(response.data)
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_create_order_with_discount_coupon_status_201_and_ticket_has_discount(self):
+        ticket_with_active_coupon = copy.deepcopy(self.defaults_ticket_json)
+        code = "SUMMER9999"
+        ticket_with_active_coupon["tickets"][0]["discount_coupon"] = code
+
+        response = self.client.post(self.list_url, ticket_with_active_coupon, format="json")
+
+        expected_discount = Decimal(DiscountCoupon.objects.get(code=code).discount)
+        actual_discount = Decimal(response.data["tickets"][0]["discount"])
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(actual_discount, expected_discount)
+
+    def test_create_ticket_with_occupied_place_status_400(self):
+        ticket_with_occupied_place = copy.deepcopy(self.defaults_ticket_json)
+        ticket_with_occupied_place["tickets"][0]["row"] = 9
+        ticket_with_occupied_place["tickets"][0]["letter"] = "A"
+
+        response = self.client.post(self.list_url, ticket_with_occupied_place, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_ticket_if_row_is_out_range_status_400(self):
+        ticket_with_row_out_range = copy.deepcopy(self.defaults_ticket_json)
+        ticket_with_row_out_range["tickets"][0]["row"] = 99999 # ------> wrong row, its more than there is
+
+        response = self.client.post(self.list_url, ticket_with_row_out_range, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_if_has_luggage_is_false_but_luggage_weight_more_than_0_status_201(self):
+        # logic must by itself change has_luggage to True in this situation
+        ticket_has_luggage_is_false_but_has_luggage_weight = copy.deepcopy(self.defaults_ticket_json)
+        ticket_has_luggage_is_false_but_has_luggage_weight["tickets"][0]["has_luggage"] = False
+        ticket_has_luggage_is_false_but_has_luggage_weight["tickets"][0]["luggage_weight"] = 50
+
+        response = self.client.post(
+            self.list_url,
+            ticket_has_luggage_is_false_but_has_luggage_weight,
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["tickets"][0]["has_luggage"], True)
+        self.assertEqual(float(response.data["tickets"][0]["luggage_weight"]), float(50))
+
+    def test_create_empty_order_status_400(self):
+        no_tickets = {
+            "tickets": []
+        }
+        response = self.client.post(self.list_url, no_tickets, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
