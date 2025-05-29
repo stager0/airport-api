@@ -1,21 +1,37 @@
-from http.client import responses
+from datetime import datetime
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils.timezone import make_aware
+from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
-from yaml import serialize
 
 from airport.models import (
     AirplaneType,
     Airplane,
     Airport,
     Route,
-    Crew
+    Crew, Flight
 )
-from airport.serializers import CrewSerializer, RouteSerializer, AirportSerializer, AirplaneSerializer, \
-    AirplaneTypeSerializer, RouteListSerializer
+from airport.serializers import (
+    CrewSerializer,
+    AirportSerializer,
+    AirplaneSerializer,
+    AirplaneTypeSerializer,
+    RouteListSerializer,
+    FlightListSerializer
+)
+
+defaults_flight = {
+        "departure_time": make_aware(datetime(2025, 9, 9, 14, 33)),
+        "arrival_time": make_aware(datetime(2025, 9, 9, 18, 27)),
+        "price_economy": 175,
+        "price_business": 280,
+        "rows_economy_from": 4,
+        "luggage_price_1_kg": 1.99
+    }
 
 
 class BaseCase(TestCase):
@@ -27,6 +43,8 @@ class BaseCase(TestCase):
         self.route = Route.objects.create(source=self.airport, destination=self.airport1, distance=920)
         self.crew_captain = Crew.objects.create(first_name="Joe" ,last_name="Henrynton", position="CAPTAIN")
         self.crew_first_officer = Crew.objects.create(first_name="Oleg" ,last_name="Berny", position="FIRST_OFFICER")
+        self.flight = Flight.objects.create(**defaults_flight, route=self.route, airplane=self.airplane)
+        self.flight.crew.set([self.crew_captain, self.crew_first_officer])
         self.user = get_user_model().objects.create_user(
             email="test_email@test.com",
             first_name="Vasyl",
@@ -46,7 +64,7 @@ class BaseCase(TestCase):
         self.client = APIClient()
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.access_token)
 
-
+"""
 class AirplaneTypeApiTests(BaseCase):
     def setUp(self):
         super().setUp()
@@ -212,3 +230,42 @@ class CrewApiTests(BaseCase):
         response = self.client.post(self.list_url, {"first_name": "Joe", "last_name": "Joe", "position": "CAPTAIN"}, format="json")
 
         self.assertEqual(response.status_code, 201)
+"""
+
+class FlightApiTests(BaseCase):
+    def setUp(self):
+        super().setUp()
+        self.list_url = reverse("airport:flight-list")
+
+    def test_flight_list_status_200_and_contains_value(self):
+        response = self.client.get(self.list_url)
+        flights = Flight.objects.all()
+
+        serializer = FlightListSerializer(flights, many=True)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertContains(response, "2025-09-09T14:33:00Z")
+
+    def test_flight_str(self):
+        self.assertEqual(str(self.flight), "International Airport Odessa -> International Airport Lviv")
+
+    def test_create_flight_when_is_staff_false_status_403(self):
+        response = self.client.post(self.list_url, {
+            **defaults_flight,
+            "airplane": self.airplane.id,
+            "route": self.route.id,
+            "crew": [self.crew_captain.id, self.crew_first_officer.id]
+        }, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_create_flight_when_is_staff_status_201(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
+        response = self.client.post(self.list_url, {
+            **defaults_flight,
+            "airplane": self.airplane.id,
+            "route": self.route.id,
+            "crew": [self.crew_captain.id, self.crew_first_officer.id]
+        }, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
