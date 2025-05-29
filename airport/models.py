@@ -7,7 +7,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.text import slugify
 
-from airport.validators import validate_discount_coupon_code
+from airport.validators import validate_discount_coupon_code, validate_discount_date
 
 
 def create_custom_path(instance, filename):
@@ -48,7 +48,8 @@ class Airplane(models.Model):
 
     @property
     def seats_in_row_count(self):
-        return len(self.letters_in_row)
+        cleaned_letters_in_row = self.letters_in_row.replace(" ", "")
+        return len(cleaned_letters_in_row)
 
     def __str__(self):
         return f"{self.name}, rows: {self.rows}, letters in row: {self.letters_in_row}"
@@ -59,7 +60,7 @@ class Airport(models.Model):
     closest_big_city = models.CharField(max_length=255)
 
     def __str__(self):
-        return f"{self.name} city: ({self.closest_big_city})"
+        return f"{self.name}, city: ({self.closest_big_city})"
 
 
 class Route(models.Model):
@@ -94,14 +95,14 @@ class Crew(models.Model):
 
     def __str__(self):
         return (
-            f"{self.first_name}, "
+            f"{self.first_name} "
             f"{self.last_name}, "
-            f"Position: {self.position}"
+            f"Position: {self.get_position_display()}"
         )
 
     @property
     def full_name_and_position(self):
-        return self.first_name + " " + self.last_name + " Position: " + self.position
+        return self.first_name + " " + self.last_name + ", Position: " + self.get_position_display()
 
 
 class Flight(models.Model):
@@ -148,7 +149,7 @@ class Order(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return str(self.created_at)
+        return str(self.created_at.strftime("%Y-%m-%d %H:%M"))
 
 
 class SnacksAndDrinks(models.Model):
@@ -195,7 +196,7 @@ class ExtraEntertainmentAndComfort(models.Model):
 # for example "new year discount 5%" etc.
 class DiscountCoupon(models.Model):
     name = models.CharField(max_length=255)
-    valid_until = models.DateTimeField()
+    valid_until = models.DateTimeField(validators=[validate_discount_date])
     code = models.CharField(validators=[validate_discount_coupon_code])
     discount = models.IntegerField(null=False)
     is_active = models.BooleanField(blank=True, default=True)
@@ -241,12 +242,12 @@ class Ticket(models.Model):
     extra_entertainment_and_comfort = models.ManyToManyField(
         ExtraEntertainmentAndComfort,
         related_name="tickets",
-        blank=True
+        blank=True,
     )
     snacks_and_drinks = models.ManyToManyField(
         SnacksAndDrinks,
         related_name="tickets",
-        blank=True
+        blank=True,
     )
     is_business = models.BooleanField(null=True, blank=True, default=False)
     discount_coupon = models.ForeignKey(
