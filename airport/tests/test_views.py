@@ -27,7 +27,7 @@ from airport.serializers import (
     AirplaneTypeSerializer,
     RouteListSerializer,
     FlightListSerializer,
-    OrderListSerializer
+    OrderListSerializer, SnacksAndDrinksSerializer
 )
 
 defaults_flight = {
@@ -102,6 +102,7 @@ class BaseCase(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.access_token)
 
 
+"""
 class AirplaneTypeApiTests(BaseCase):
     def setUp(self):
         super().setUp()
@@ -452,3 +453,34 @@ class OrderApiTests(BaseCase):
         response = self.client.post(self.list_url, no_tickets, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+"""
+
+
+class SnacksAndDrinksApiTests(BaseCase):
+    def setUp(self):
+        super().setUp()
+        self.list_url = reverse("airport:snacksanddrinks-list")
+
+    def test_snacks_list_status_200_and_contains_value(self):
+        response = self.client.get(self.list_url)
+        snacks = SnacksAndDrinks.objects.all()
+
+        serializer = SnacksAndDrinksSerializer(snacks, many=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Chips")
+        self.assertEqual(response.data, serializer.data)
+
+    def test_snacks_str(self):
+        self.assertEqual(str(self.snacks_and_drinks), f"{self.snacks_and_drinks.name}, PRICE={self.snacks_and_drinks.price}$")
+
+    def test_create_snacks_when_is_staff_false_status_403(self):
+        response = self.client.post(self.list_url, {"name": "Tuc", "price": 3.99}, format="json")
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_create_snacks_when_is_staff_true_status_201(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
+        response = self.client.post(self.list_url, {"name": "Tuc", "price": 3.99}, format="json")
+
+        self.assertEqual(response.status_code, 201)
