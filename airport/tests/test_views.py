@@ -1,6 +1,7 @@
 import copy
 import tempfile
 from datetime import datetime
+from dateutil.parser import parse, isoparse
 from decimal import Decimal
 from http.client import responses
 
@@ -20,7 +21,14 @@ from airport.models import (
     Airplane,
     Airport,
     Route,
-    Crew, Flight, SnacksAndDrinks, MealOption, ExtraEntertainmentAndComfort, DiscountCoupon, Ticket, Order
+    Crew,
+    Flight,
+    SnacksAndDrinks,
+    MealOption,
+    ExtraEntertainmentAndComfort,
+    DiscountCoupon,
+    Ticket,
+    Order
 )
 from airport.serializers import (
     CrewSerializer,
@@ -33,18 +41,11 @@ from airport.serializers import (
     SnacksAndDrinksSerializer,
     MealOptionSerializer,
     ExtraEntertainmentAndComfortSerializer,
-    DiscountCouponSerializer, DISCOUNT_FOR_CHILDREN, OrderSerializer, OrderRetrieveSerializer
+    DiscountCouponSerializer,
+    DISCOUNT_FOR_CHILDREN,
+    OrderSerializer,
+    OrderRetrieveSerializer
 )
-
-defaults_flight = {
-    "departure_time": make_aware(datetime(2025, 9, 9, 14, 33)),
-    "arrival_time": make_aware(datetime(2025, 9, 9, 18, 27)),
-    "price_economy": 175,
-    "price_business": 280,
-    "rows_economy_from": 4,
-    "luggage_price_1_kg": 1.99
-}
-
 
 def sample_ticket(**params):
     defaults = {
@@ -87,8 +88,11 @@ class BaseCase(TestCase):
             password="1qazcde3"
         )
         self.airplane_type = AirplaneType.objects.create(name="Passage")
+        self.airplane_type1 = AirplaneType.objects.create(name="Business")
         self.airplane = Airplane.objects.create(name="Boeing", rows=10, letters_in_row="ABCDEFGH",
                                                 airplane_type=self.airplane_type)
+        self.airplane1 = Airplane.objects.create(name="Jet", rows=15, letters_in_row="ABCD EFGH",
+                                                airplane_type=self.airplane_type1)
         self.airport = Airport.objects.create(name="International Airport Odessa", closest_big_city="Odessa")
         self.airport1 = Airport.objects.create(name="International Airport Lviv", closest_big_city="Lviv")
         self.airport2 = Airport.objects.create(name="International Airport Paris", closest_big_city="Paris")
@@ -96,8 +100,28 @@ class BaseCase(TestCase):
         self.route1 = Route.objects.create(source=self.airport2, destination=self.airport, distance=1900)
         self.crew_captain = Crew.objects.create(first_name="Joe", last_name="Henrynton", position="CAPTAIN")
         self.crew_first_officer = Crew.objects.create(first_name="Oleg", last_name="Berny", position="FIRST_OFFICER")
-        self.flight = Flight.objects.create(**defaults_flight, route=self.route, airplane=self.airplane)
+        self.flight = Flight.objects.create(
+            departure_time=make_aware(datetime(2025, 9, 9, 14, 33)),
+            arrival_time=make_aware(datetime(2025, 9, 9, 18, 27)),
+            price_economy=175,
+            price_business=280,
+            rows_economy_from=4,
+            luggage_price_1_kg=1.99,
+            route=self.route,
+            airplane=self.airplane
+        )
+        self.flight1 = Flight.objects.create(
+            departure_time=make_aware(datetime(2026, 12, 12, 12, 12)),
+            arrival_time=make_aware(datetime(2026, 12, 12, 19, 44)),
+            price_economy=365,
+            price_business=488,
+            rows_economy_from=8,
+            luggage_price_1_kg=5.99,
+            route=self.route1,
+            airplane=self.airplane1
+        )
         self.flight.crew.set([self.crew_captain, self.crew_first_officer])
+        self.flight1.crew.set([self.crew_captain, self.crew_first_officer])
         self.snacks_and_drinks = SnacksAndDrinks.objects.create(name="Chips", price=2.99)
         self.meal_option = MealOption.objects.create(name="Borsch", meal_type=1, weight=300, price=8.99)
         self.meal_option1 = MealOption.objects.create(name="Pasta", meal_type=3, weight=440, price=10.99)
@@ -118,7 +142,6 @@ class BaseCase(TestCase):
         self.super_access_token = str(refresh_super.access_token)
         self.client = APIClient()
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.access_token)
-
 
 
 class OrderApiTests(BaseCase):
@@ -573,6 +596,16 @@ class FlightApiTests(BaseCase):
     def setUp(self):
         super().setUp()
         self.list_url = reverse("airport:flight-list")
+        self.departure_from_and_to = "2026-01-11T00:00:01Z"
+
+        self.defaults_flight = {
+            "departure_time": make_aware(datetime(2025, 9, 9, 14, 33)),
+            "arrival_time": make_aware(datetime(2025, 9, 9, 18, 27)),
+            "price_economy": 175,
+            "price_business": 280,
+            "rows_economy_from": 4,
+            "luggage_price_1_kg": 1.99,
+        }
 
     def test_flight_list_status_200_and_contains_value(self):
         response = self.client.get(self.list_url)
@@ -586,9 +619,57 @@ class FlightApiTests(BaseCase):
     def test_flight_str(self):
         self.assertEqual(str(self.flight), "International Airport Odessa -> International Airport Lviv")
 
+    def test_flight_filter_by_destination(self):
+        response = self.client.get(self.list_url, {"destination": f"{self.flight.route.destination.closest_big_city}"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["route"]["destination"]["closest_big_city"], self.flight.route.destination.closest_big_city)
+        self.assertNotEqual(response.data[0]["route"]["destination"]["closest_big_city"], self.flight1.route.destination.closest_big_city)
+
+    def test_flight_filter_by_source(self):
+        response = self.client.get(self.list_url, {"source": f"{self.flight.route.source.closest_big_city}"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["route"]["source"]["closest_big_city"], self.flight.route.source.closest_big_city)
+        self.assertNotEqual(response.data[0]["route"]["source"]["closest_big_city"], self.flight1.route.source.closest_big_city)
+
+    def test_flight_filter_by_airplane(self):
+        response = self.client.get(self.list_url, {"airplane": f"{self.flight.airplane.name}"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["airplane"]["name"], self.flight.airplane.name)
+        self.assertNotEqual(response.data[0]["airplane"]["name"], self.flight1.airplane.name)
+
+    def test_flight_filter_by_date_from(self):
+        response = self.client.get(self.list_url, {"departure_time_from": f"{self.departure_from_and_to}"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertNotEqual(parse(response.data[0]["departure_time"]), self.flight.departure_time)
+        self.assertEqual(parse(response.data[0]["departure_time"]), self.flight1.departure_time)
+
+    def test_flight_filter_by_date_to(self):
+        response = self.client.get(self.list_url, {"departure_time_to": f"{self.departure_from_and_to}"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(isoparse(response.data[0]["departure_time"]), self.flight.departure_time)
+        self.assertNotEqual(isoparse(response.data[0]["departure_time"]), self.flight1.departure_time)
+
+    def test_flight_filter_by_arrival_time(self):
+        response = self.client.get(self.list_url, {"arrival_time": f"{self.departure_from_and_to}"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(isoparse(response.data[0]["arrival_time"]), self.flight1.arrival_time)
+        self.assertNotEqual(isoparse(response.data[0]["arrival_time"]), self.flight.arrival_time)
+
     def test_create_flight_when_is_staff_false_status_403(self):
         response = self.client.post(self.list_url, {
-            **defaults_flight,
+            **self.defaults_flight,
             "airplane": self.airplane.id,
             "route": self.route.id,
             "crew": [self.crew_captain.id, self.crew_first_officer.id]
@@ -599,7 +680,7 @@ class FlightApiTests(BaseCase):
     def test_create_flight_when_is_staff_status_201(self):
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
         response = self.client.post(self.list_url, {
-            **defaults_flight,
+            **self.defaults_flight,
             "airplane": self.airplane.id,
             "route": self.route.id,
             "crew": [self.crew_captain.id, self.crew_first_officer.id]
