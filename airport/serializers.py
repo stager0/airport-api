@@ -21,6 +21,9 @@ from airport.models import (
 )
 from user.serializers import UserOnlyIdAndNameSerializer
 
+# discount for children's tickets in our company
+DISCOUNT_FOR_CHILDREN = 50
+
 
 class DiscountCouponSerializer(serializers.ModelSerializer):
     class Meta:
@@ -66,7 +69,7 @@ class ExtraEntertainmentAndComfortSerializer(serializers.ModelSerializer):
 
 class ExtraEntertainmentAndComfortImageSerializer(serializers.ModelSerializer):
     class Meta:
-        model = ExtraEntertainmentAndComfortSerializer
+        model = ExtraEntertainmentAndComfort
         fields = ("id", "image")
 
 
@@ -97,7 +100,7 @@ class CrewImageSerializer(serializers.ModelSerializer):
 class AirplaneTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = AirplaneType
-        fields = ("id", "name",)
+        fields = ("id", "name")
 
 
 class AirplaneSerializer(serializers.ModelSerializer):
@@ -180,10 +183,10 @@ class FlightListSerializer(FlightSerializer):
             "economy_places_available"
         )
 
-    def get_business_places_available(self, obj):
+    def get_business_places_available(self, obj) -> int:
         return (obj.airplane.seats_in_row_count * obj.rows_economy_from) - obj.taken_business
 
-    def get_economy_places_available(self, obj):
+    def get_economy_places_available(self, obj) -> int:
         return (obj.airplane.seats_in_row_count * (obj.airplane.rows - obj.rows_economy_from)) - obj.economy_taken
 
 
@@ -196,7 +199,7 @@ class FlightRetrieveSerializer(FlightSerializer):
     class Meta(FlightSerializer.Meta):
         fields = FlightSerializer.Meta.fields + ("all_free_places", "luggage_price_1_kg", "crew")
 
-    def get_all_free_places(self, obj):
+    def get_all_free_places(self, obj) -> tuple[str, str]:
         taken_seats_and_letters = set(obj.tickets.values_list("row", "letter"))
         rows = int(obj.airplane.rows)
         letters = list(obj.airplane.letters_in_row)
@@ -241,6 +244,8 @@ class TicketSerializer(serializers.ModelSerializer):
     )
     discount_coupon = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     discount = serializers.IntegerField(read_only=True)
+    is_child = serializers.BooleanField(required=False, allow_null=True)
+    identify = serializers.CharField(required=False, allow_null=True, allow_blank=True, read_only=True)
 
     def validate(self, attrs):
         Ticket.validate_ticket(
@@ -257,6 +262,7 @@ class TicketSerializer(serializers.ModelSerializer):
             "id",
             "row",
             "letter",
+            "is_child",
             "discount",
             "has_luggage",
             "flight",
@@ -265,7 +271,8 @@ class TicketSerializer(serializers.ModelSerializer):
             "extra_entertainment_and_comfort",
             "snacks_and_drinks",
             "discount_coupon",
-            "luggage_weight"
+            "luggage_weight",
+            "identify"
         )
 
 
@@ -278,6 +285,8 @@ class TicketDetailSerializer (serializers.ModelSerializer):
     ticket_price = serializers.SerializerMethodField(read_only=True)
     luggage_price = serializers.SerializerMethodField(read_only=True)
     extra_price = serializers.SerializerMethodField(read_only=True)
+    is_child = serializers.BooleanField(read_only=True)
+    identify = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = Ticket
@@ -285,6 +294,7 @@ class TicketDetailSerializer (serializers.ModelSerializer):
             "id",
             "row",
             "letter",
+            "is_child",
             "discount",
             "has_luggage",
             "flight",
@@ -295,19 +305,20 @@ class TicketDetailSerializer (serializers.ModelSerializer):
             "luggage_weight",
             "ticket_price",
             "luggage_price",
-            "extra_price"
+            "extra_price",
+            "identify"
         )
 
-    def get_ticket_price(self, obj):
+    def get_ticket_price(self, obj) -> float:
         if obj.is_business is True:
             return Flight.objects.get(id=obj.flight.id).price_business
         return Flight.objects.get(id=obj.flight.id).price_economy
 
-    def get_luggage_price(self, obj):
+    def get_luggage_price(self, obj) -> float | None:
         if obj.has_luggage and obj.luggage_weight is not None:
             return obj.luggage_weight * obj.flight.luggage_price_1_kg
 
-    def get_extra_price(self, obj):
+    def get_extra_price(self, obj) -> float:
         entertainment = [item.name for item in obj.extra_entertainment_and_comfort.all()]
         snacks = [item.name for item in obj.snacks_and_drinks.all()]
         meal_type = obj.meal_option.name
@@ -390,12 +401,17 @@ class OrderSerializer(serializers.ModelSerializer):
 
                 if coupon_object and coupon_object.valid_until > timezone.now():
                     discount = coupon_object.discount
+                    if ticket.is_child is True:
+                        discount = coupon_object.discount =+ DISCOUNT_FOR_CHILDREN
                     ticket_price *= Decimal(1 - discount / 100)
                     ticket.discount = discount
 
                 if not coupon_object or ticket.discount <= 0 or coupon_object.valid_until < timezone.now():
                     ticket.discount = 0
                     ticket.discount_coupon = None
+                    if ticket.is_child:
+                        ticket.discount = DISCOUNT_FOR_CHILDREN
+
 
                 total_price += ticket_price
                 ticket.price = Decimal(ticket_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
