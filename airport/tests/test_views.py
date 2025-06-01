@@ -3,9 +3,9 @@ import tempfile
 from datetime import datetime
 from dateutil.parser import parse, isoparse
 from decimal import Decimal
-from http.client import responses
 
 from PIL import Image
+from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.db.models import Count, F
 from django.test import TestCase
@@ -43,7 +43,6 @@ from airport.serializers import (
     ExtraEntertainmentAndComfortSerializer,
     DiscountCouponSerializer,
     DISCOUNT_FOR_CHILDREN,
-    OrderSerializer,
     OrderRetrieveSerializer
 )
 
@@ -67,7 +66,7 @@ def sample_ticket(**params):
 
 def generate_image_for_tests():
     image_to_upload = Image.new("RGB", (150, 150), color="green")
-    temporary_file = tempfile.TemporaryFile(suffix=".jpg")
+    temporary_file = tempfile.TemporaryFile(suffix=".jpg", delete=True)
     image_to_upload.save(temporary_file, format="JPEG")
     temporary_file.seek(0)
     return temporary_file
@@ -320,20 +319,20 @@ class AirplaneTypeApiTests(BaseCase):
 
         serializer = AirplaneTypeSerializer(airplane_types, many=True)
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertContains(response, "Passage", 1)
         self.assertEqual(response.data, serializer.data)
 
-    def test_airplane_type_create_200(self):
+    def test_airplane_type_create_if_is_staff_false_403(self):
         response = self.client.post(self.list_url, {"name": "TEST"}, format="json")
 
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_airplane_type_create_403(self):
+    def test_airplane_type_create_is_staff_201(self):
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
         response = self.client.post(self.list_url, {"name": "TEST"}, format="json")
 
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
 
 class AirplaneApiTests(BaseCase):
@@ -348,7 +347,7 @@ class AirplaneApiTests(BaseCase):
 
         serializer = AirplaneSerializer(airplanes, many=True)
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertContains(response, "Boeing", 1)
         self.assertEqual(response.data, serializer.data)
 
@@ -359,7 +358,7 @@ class AirplaneApiTests(BaseCase):
             "letters_in_row": "ABC",
             "airplane_type": self.airplane_type
         })
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_create_when_user_is_staff_status_201(self):
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
@@ -370,9 +369,12 @@ class AirplaneApiTests(BaseCase):
             "airplane_type": self.airplane_type.id
         }, format="json")
 
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    def test_upload_image_to_airplane_when_user_is_staff_status_200(self):
+    @patch("django.core.files.storage.FileSystemStorage.save")
+    def test_upload_image_to_airplane_when_user_is_staff_status_200(self, mock_save):
+        mock_save.return_value = "uploads/fake_upload_image.jpg"
+
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
         image = generate_image_for_tests()
 
@@ -380,11 +382,14 @@ class AirplaneApiTests(BaseCase):
             "image": image
         }, format="multipart")
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("image", response.data)
         self.assertTrue(response.data["image"].endswith(".jpg"))
 
-    def test_upload_image_when_user_is_not_staff_status_403(self):
+    @patch("django.core.files.storage.FileSystemStorage.save")
+    def test_upload_image_when_user_is_not_staff_status_403(self, mock_save):
+        mock_save.return_value = "uploads/fake_upload_image.jpg"
+
         image = generate_image_for_tests()
 
         response = self.client.post(self.upload_url, {"image": image}, format="multipart")
@@ -414,7 +419,7 @@ class AirportApiTests(BaseCase):
 
         serializer = AirportSerializer(airports, many=True)
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertContains(response, "Odessa")
         self.assertEqual(response.data, serializer.data)
 
@@ -440,13 +445,13 @@ class AirportApiTests(BaseCase):
     def test_create_without_is_staff_status_403(self):
         response = self.client.post(self.list_url, {"name": "Krymea International Airport", "closest_big_city": "Krymea"})
 
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_airport_create_when_user_is_staff_status_201(self):
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
         response = self.client.post(self.list_url, {"name": "Krymea International Airport", "closest_big_city": "Krymea"}, format="json")
 
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
 
 class RouteApiTest(BaseCase):
@@ -460,7 +465,7 @@ class RouteApiTest(BaseCase):
 
         serializer = RouteListSerializer(routes, many=True)
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertContains(response, "Lviv")
         self.assertEqual(response.data, serializer.data)
 
@@ -505,7 +510,7 @@ class RouteApiTest(BaseCase):
                                     {"source": self.airport.id, "destination": self.airport1.id, "distance": 999},
                                     format="json")
 
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_create_route_when_user_is_staff_status_201(self):
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
@@ -513,7 +518,7 @@ class RouteApiTest(BaseCase):
                                     {"source": self.airport.id, "destination": self.airport1.id, "distance": 999},
                                     format="json")
 
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
 
 
@@ -529,7 +534,7 @@ class CrewApiTests(BaseCase):
 
         serializer = CrewSerializer(crews, many=True)
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertContains(response, "Henrynton")
         self.assertEqual(response.data, serializer.data)
 
@@ -566,25 +571,31 @@ class CrewApiTests(BaseCase):
     def test_create_crew_when_is_staff_false_status_403(self):
         response = self.client.post(self.list_url, {"first_name": "Joe", "last_name": "Joe", "position": "CAPTAIN"}, format="json")
 
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_create_crew_when_is_staff_true_status_201(self):
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
         response = self.client.post(self.list_url, {"first_name": "Joe", "last_name": "Joe", "position": "CAPTAIN"}, format="json")
 
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    def test_upload_image_to_crew_when_user_is_staff_status_200(self):
+    @patch("django.core.files.storage.FileSystemStorage.save")
+    def test_upload_image_to_crew_when_user_is_staff_status_200(self, mock_save):
+        mock_save.return_value = "uploads/fake_upload_image.jpg"
+
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
         image = generate_image_for_tests()
 
         response = self.client.post(self.upload_url, {"image": image}, format="multipart")
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("image", response.data)
         self.assertTrue(response.data["image"].endswith(".jpg"))
 
-    def test_upload_image_to_crew_when_user_is_not_staff_status_403(self):
+    @patch("django.core.files.storage.FileSystemStorage.save")
+    def test_upload_image_to_crew_when_user_is_not_staff_status_403(self, mock_save):
+        mock_save.return_value = "uploads/fake_image_upload.jpg"
+
         image = generate_image_for_tests()
 
         response = self.client.post(self.upload_url, {"image": image}, format="multipart")
@@ -701,7 +712,7 @@ class SnacksAndDrinksApiTests(BaseCase):
 
         serializer = SnacksAndDrinksSerializer(snacks, many=True)
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertContains(response, "Chips")
         self.assertEqual(response.data, serializer.data)
 
@@ -711,15 +722,18 @@ class SnacksAndDrinksApiTests(BaseCase):
     def test_create_snacks_when_is_staff_false_status_403(self):
         response = self.client.post(self.list_url, {"name": "Tuc", "price": 3.99}, format="json")
 
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_create_snacks_when_is_staff_true_status_201(self):
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
         response = self.client.post(self.list_url, {"name": "Tuc", "price": 3.99}, format="json")
 
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    def test_upload_image_to_snacks_when_user_is_staff_status_200(self):
+    @patch("django.core.files.storage.FileSystemStorage.save")
+    def test_upload_image_to_snacks_when_user_is_staff_status_200(self, mock_save):
+        mock_save.return_value = "uploads/fake_upload_image.jpg"
+
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
         image = generate_image_for_tests()
 
@@ -727,11 +741,14 @@ class SnacksAndDrinksApiTests(BaseCase):
             "image": image
         }, format="multipart")
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("image", response.data)
         self.assertTrue(response.data["image"].endswith(".jpg"))
 
-    def test_upload_image_to_snacks_when_user_is_not_staff_status_403(self):
+    @patch("django.core.files.storage.FileSystemStorage.save")
+    def test_upload_image_to_snacks_when_user_is_not_staff_status_403(self, mock_save):
+        mock_save.return_value = "uploads/fake_upload_image.jpg"
+
         image = generate_image_for_tests()
 
         response = self.client.post(self.upload_url, {"image": image}, format="multipart")
@@ -751,7 +768,7 @@ class MealOptionApiTests(BaseCase):
 
         serializer = MealOptionSerializer(meal_options, many=True)
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertContains(response, "Borsch")
         self.assertEqual(response.data, serializer.data)
 
@@ -771,7 +788,7 @@ class MealOptionApiTests(BaseCase):
             "weight": 300
         }, format="json")
 
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_meal_option_filter_by_price(self):
         response = self.client.get(self.list_url, {"price": f"{self.meal_option.price}"})
@@ -806,9 +823,12 @@ class MealOptionApiTests(BaseCase):
             "weight": 300
         }, format="json")
 
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    def test_upload_image_to_meal_option_when_user_is_staff_status_200(self):
+    @patch("django.core.files.storage.FileSystemStorage.save")
+    def test_upload_image_to_meal_option_when_user_is_staff_status_200(self, mock_save):
+        mock_save.return_value = "uploads/fake_image_upload.jpg"
+
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
         image = generate_image_for_tests()
 
@@ -816,11 +836,14 @@ class MealOptionApiTests(BaseCase):
             "image": image
         }, format="multipart")
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("image", response.data)
         self.assertTrue(response.data["image"].endswith(".jpg"))
 
-    def test_upload_image_to_meal_option_when_user_is_not_staff_status_403(self):
+    @patch("django.core.files.storage.FileSystemStorage.save")
+    def test_upload_image_to_meal_option_when_user_is_not_staff_status_403(self, mock_save):
+        mock_save.return_value = "uploads/fake_image_upload.jpg"
+
         image = generate_image_for_tests()
 
         response = self.client.post(self.upload_url, {"image": image}, format="multipart")
@@ -840,7 +863,7 @@ class ExtraEntertainmentAndComfortApiTests(BaseCase):
 
         serializer = ExtraEntertainmentAndComfortSerializer(extra, many=True)
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertContains(response, "Tablet Ipad (45 games)")
         self.assertEqual(response.data, serializer.data)
 
@@ -858,15 +881,18 @@ class ExtraEntertainmentAndComfortApiTests(BaseCase):
     def test_create_extra_when_is_staff_false_status_403(self):
         response = self.client.post(self.list_url, {"name": "Pillow", "price": 2.99}, format="json")
 
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_create_extra_when_is_staff_true_status_201(self):
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
         response = self.client.post(self.list_url, {"name": "Pillow", "price": 2.99}, format="json")
 
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    def test_upload_image_to_extra_entertainment_when_user_is_staff_status_200(self):
+    @patch("django.core.files.storage.FileSystemStorage.save")
+    def test_upload_image_to_extra_entertainment_when_user_is_staff_status_200(self, mock_save):
+        mock_save.return_value = "uploads/fake_upload_image.jpg"
+
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
         image = generate_image_for_tests()
 
@@ -874,11 +900,14 @@ class ExtraEntertainmentAndComfortApiTests(BaseCase):
             "image": image
         }, format="multipart")
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("image", response.data)
         self.assertTrue(response.data["image"].endswith(".jpg"))
 
-    def test_upload_image_to_extra_entertainment_when_user_is_not_staff_status_403(self):
+    @patch("django.core.files.storage.FileSystemStorage.save")
+    def test_upload_image_to_extra_entertainment_when_user_is_not_staff_status_403(self, mock_save):
+        mock_save.return_value = "uploads/fake_image_upload.jpg"
+
         image = generate_image_for_tests()
 
         response = self.client.post(self.upload_url, {"image": image}, format="multipart")
@@ -897,7 +926,7 @@ class DiscountCouponApiTests(BaseCase):
 
         serializer = DiscountCouponSerializer(discount_coupons, many=True)
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertContains(response, "Summer Action")
         self.assertEqual(response.data, serializer.data)
 
@@ -925,7 +954,7 @@ class DiscountCouponApiTests(BaseCase):
         },
         format="json")
 
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_create_discount_coupon_when_is_staff_true_status_201(self):
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
@@ -937,7 +966,7 @@ class DiscountCouponApiTests(BaseCase):
         },
         format="json")
 
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_create_discount_code_if_valid_until_earlier_than_now(self):
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.super_access_token)
@@ -949,4 +978,4 @@ class DiscountCouponApiTests(BaseCase):
         },
         format="json")
 
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
