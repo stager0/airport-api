@@ -10,9 +10,6 @@ from django.utils.text import slugify
 from airport.validators import validate_discount_coupon_code, validate_discount_date
 
 
-def create_custom_uuid_ticket():
-    return str(uuid.uuid4())[:23]  # example: f47ac10b-58cc-4372-a567
-
 def create_custom_path(instance, filename):
     _, extension = os.path.splitext(filename)
     model_lower = str(instance.__class__.__name__).lower() + "s_media_files"
@@ -209,7 +206,6 @@ class DiscountCoupon(models.Model):
 
 
 class Ticket(models.Model):
-    identifier = models.CharField(default=create_custom_uuid_ticket(), null=True, blank=True)
     row = models.IntegerField()
     letter = models.CharField(max_length=1)
     is_child = models.BooleanField(default=False, null=True, blank=True)

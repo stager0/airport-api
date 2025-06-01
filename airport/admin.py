@@ -15,6 +15,7 @@ from airport.models import (
     Order
 )
 
+
 admin.site.register(AirplaneType)
 admin.site.register(Airplane)
 admin.site.register(Airport)
@@ -23,6 +24,7 @@ admin.site.register(SnacksAndDrinks)
 admin.site.register(MealOption)
 admin.site.register(ExtraEntertainmentAndComfort)
 admin.site.register(DiscountCoupon)
+
 
 class TicketInline(admin.TabularInline):
     model = Ticket

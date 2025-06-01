@@ -1,7 +1,6 @@
 from django.urls import path, include
 from rest_framework import routers
 
-from airport.serializers import DiscountCouponSerializer
 from airport.views import (
     MealOptionViewSet,
     SnacksAndDrinksViewSet,
@@ -12,7 +11,8 @@ from airport.views import (
     AirplaneViewSet,
     RouteViewSet,
     FlightViewSet,
-    OrderViewSet, DiscountCouponViewSet
+    OrderViewSet,
+    DiscountCouponViewSet
 )
 
 app_name = "airport"

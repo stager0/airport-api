@@ -1,5 +1,7 @@
 from django.db.models import Count, F, Q
 from django.db.models.functions import Length
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
@@ -16,11 +18,12 @@ from airport.models import (
     Airplane,
     Route,
     Flight,
-    Order, DiscountCoupon
+    Order,
+    DiscountCoupon
 )
 from airport.permissions import IsAdminOrIsAuthenticatedReadOnly
+from airport.schema.airplane_type_schema import airplane_type_schema
 from airport.schema.airplane_schema import airplane_schema
-from airport.schema.airplane_type_schema import airport_type_schema
 from airport.schema.airport_schema import airport_schema
 from airport.schema.crew_schema import crew_schema
 from airport.schema.discount_coupon_schema import discount_coupon_schema
@@ -49,11 +52,28 @@ from airport.serializers import (
     DiscountCouponSerializer,
     MealOptionImageSerializer,
     SnacksAndDrinksImageSerializer,
-    CrewImageSerializer, ExtraEntertainmentAndComfortImageSerializer, AirplaneImageSerializer,
+    CrewImageSerializer,
+    ExtraEntertainmentAndComfortImageSerializer,
+    AirplaneImageSerializer,
 )
 
 
 class UploadImageMixin:
+    @extend_schema(
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {
+                    "image": {
+                        "type": "string",
+                        "format": "binary",
+                    },
+                },
+                "required": ["image"]
+            },
+        },
+        responses={200: OpenApiTypes.STR},
+    )
     @action(
         methods=["POST"],
         detail=True,
@@ -76,7 +96,7 @@ class MealOptionViewSet(
     GenericViewSet,
     UploadImageMixin
 ):
-    queryset = MealOption.objects.all()
+    queryset = MealOption.objects.all().order_by("id")
     serializer_class = MealOptionSerializer
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
 
@@ -93,7 +113,7 @@ class MealOptionViewSet(
         if meal_type:
             queryset = queryset.filter(meal_type=meal_type)
 
-        return queryset.distinct()
+        return queryset.distinct().order_by("id")
 
     def get_serializer_class(self):
         if self.action == "upload_image":
@@ -108,7 +128,7 @@ class SnacksAndDrinksViewSet(
     GenericViewSet,
     UploadImageMixin
 ):
-    queryset = SnacksAndDrinks.objects.all()
+    queryset = SnacksAndDrinks.objects.all().order_by("id")
     serializer_class = SnacksAndDrinksSerializer
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
 
@@ -119,7 +139,7 @@ class SnacksAndDrinksViewSet(
         if name:
             queryset = queryset.filter(name__icontains=name)
 
-        return queryset.distinct()
+        return queryset.distinct().order_by("id")
 
     def get_serializer_class(self):
         if self.action == "upload_image":
@@ -134,7 +154,7 @@ class ExtraEntertainmentAndComfortViewSet(
     GenericViewSet,
     UploadImageMixin
 ):
-    queryset = ExtraEntertainmentAndComfort.objects.all()
+    queryset = ExtraEntertainmentAndComfort.objects.all().order_by("id")
     serializer_class = ExtraEntertainmentAndComfortSerializer
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
 
@@ -145,7 +165,7 @@ class ExtraEntertainmentAndComfortViewSet(
         if name:
             queryset = queryset.filter(name__icontains=name)
 
-        return queryset.distinct()
+        return queryset.distinct().order_by("id")
 
     def get_serializer_class(self):
         if self.action == "upload_image":
@@ -159,7 +179,7 @@ class AirportViewSet(
     mixins.CreateModelMixin,
     GenericViewSet
 ):
-    queryset = Airport.objects.all()
+    queryset = Airport.objects.all().order_by("id")
     serializer_class = AirportSerializer
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
 
@@ -173,7 +193,7 @@ class AirportViewSet(
         if airport_name:
             queryset = queryset.filter(name__icontains=airport_name)
 
-        return queryset.distinct()
+        return queryset.distinct().order_by("id")
 
 
 @crew_schema
@@ -183,7 +203,7 @@ class CrewViewSet(
     GenericViewSet,
     UploadImageMixin
 ):
-    queryset = Crew.objects.all()
+    queryset = Crew.objects.all().order_by("id")
     serializer_class = CrewSerializer
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
 
@@ -200,7 +220,7 @@ class CrewViewSet(
         if position:
             queryset = queryset.filter(position__icontains=position)
 
-        return queryset.distinct()
+        return queryset.distinct().order_by("id")
 
     def get_serializer_class(self):
         if self.action == "upload_image":
@@ -208,7 +228,7 @@ class CrewViewSet(
         return CrewSerializer
 
 
-@airport_type_schema
+@airplane_type_schema
 class AirplaneTypeViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
@@ -242,7 +262,7 @@ class RouteViewSet(
     mixins.CreateModelMixin,
     GenericViewSet
 ):
-    queryset = Route.objects.select_related("source", "destination")
+    queryset = Route.objects.select_related("source", "destination").order_by("id")
     serializer_class = RouteSerializer
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
 
@@ -267,7 +287,7 @@ class RouteViewSet(
         elif destination_airport:
             queryset = queryset.filter(destination__name__icontains=destination_airport)
 
-        return queryset.distinct()
+        return queryset.distinct().order_by("id")
 
 
 @flight_schema
@@ -278,7 +298,7 @@ class FlightViewSet(viewsets.ModelViewSet):
         "route__source",
         "route__destination",
         "airplane__airplane_type",
-    )
+    ).order_by("id")
 
     serializer_class = FlightSerializer
     permission_classes = [IsAdminOrIsAuthenticatedReadOnly]
@@ -318,9 +338,9 @@ class FlightViewSet(viewsets.ModelViewSet):
                 places_available=(F("airplane__rows") * F("row_length")) - Count("tickets"),
                 taken_business=Count("tickets", filter=Q(tickets__is_business=True), distinct=True),
                 economy_taken=Count("tickets", filter=Q(tickets__is_business=False), distinct=True)
-            )
+            ).order_by("id")
 
-        return queryset.prefetch_related("crew__flights").distinct()
+        return queryset.prefetch_related("crew__flights").distinct().order_by("id")
 
 
 @order_schema
@@ -337,7 +357,7 @@ class OrderViewSet(
             "tickets__flight__route__source__closest_big_city"
         ), destination=F(
             "tickets__flight__route__destination__closest_big_city"
-        )).select_related("user")
+        )).select_related("user").order_by("id")
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
 

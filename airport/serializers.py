@@ -21,7 +21,7 @@ from airport.models import (
 )
 from user.serializers import UserOnlyIdAndNameSerializer
 
-# discount for children's tickets in our company
+# discount for children's tickets in our company 0-100
 DISCOUNT_FOR_CHILDREN = 50
 
 
@@ -208,11 +208,12 @@ class FlightRetrieveSerializer(FlightSerializer):
 
         for row in range(1, rows + 1):
             for letter in letters:
-                if (row, letter) not in taken_seats_and_letters:
-                    if row > obj.rows_economy_from:
-                        list_of_free_seats.append({"row": row, "letter": letter})
-                    elif row <= obj.rows_economy_from:
-                        list_of_free_business_seats.append({"row": row, "letter": letter})
+                if not letter == " ":
+                    if (row, letter) not in taken_seats_and_letters:
+                        if row > obj.rows_economy_from:
+                            list_of_free_seats.append({"row": row, "letter": letter})
+                        elif row <= obj.rows_economy_from:
+                            list_of_free_business_seats.append({"row": row, "letter": letter})
         return f"Economy: {list_of_free_seats}",  f"Business: {list_of_free_business_seats}"
 
 
@@ -245,7 +246,6 @@ class TicketSerializer(serializers.ModelSerializer):
     discount_coupon = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     discount = serializers.IntegerField(read_only=True)
     is_child = serializers.BooleanField(required=False, allow_null=True)
-    identify = serializers.CharField(required=False, allow_null=True, allow_blank=True, read_only=True)
 
     def validate(self, attrs):
         Ticket.validate_ticket(
@@ -272,7 +272,6 @@ class TicketSerializer(serializers.ModelSerializer):
             "snacks_and_drinks",
             "discount_coupon",
             "luggage_weight",
-            "identify"
         )
 
 
@@ -286,7 +285,6 @@ class TicketDetailSerializer (serializers.ModelSerializer):
     luggage_price = serializers.SerializerMethodField(read_only=True)
     extra_price = serializers.SerializerMethodField(read_only=True)
     is_child = serializers.BooleanField(read_only=True)
-    identify = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = Ticket
@@ -306,7 +304,6 @@ class TicketDetailSerializer (serializers.ModelSerializer):
             "ticket_price",
             "luggage_price",
             "extra_price",
-            "identify"
         )
 
     def get_ticket_price(self, obj) -> float:

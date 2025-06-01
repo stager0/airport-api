@@ -1,6 +1,8 @@
 import copy
 import tempfile
 from datetime import datetime
+from io import BytesIO
+
 from dateutil.parser import parse, isoparse
 from decimal import Decimal
 
@@ -65,11 +67,12 @@ def sample_ticket(**params):
 
 
 def generate_image_for_tests():
-    image_to_upload = Image.new("RGB", (150, 150), color="green")
-    temporary_file = tempfile.TemporaryFile(suffix=".jpg", delete=True)
-    image_to_upload.save(temporary_file, format="JPEG")
-    temporary_file.seek(0)
-    return temporary_file
+    image = Image.new("RGB", (150, 150), color="green")
+    img_byte_arr = BytesIO()
+    image.save(img_byte_arr, format='JPEG')
+    img_byte_arr.name = "test.jpg"
+    img_byte_arr.seek(0)
+    return img_byte_arr
 
 
 class BaseCase(TestCase):
@@ -415,7 +418,7 @@ class AirportApiTests(BaseCase):
 
     def test_airport_list_status_200_and_contains_value(self):
         response = self.client.get(self.list_url)
-        airports = Airport.objects.all()
+        airports = Airport.objects.all().order_by("id")
 
         serializer = AirportSerializer(airports, many=True)
 
@@ -461,7 +464,7 @@ class RouteApiTest(BaseCase):
 
     def test_route_list_status_200_and_contains_value(self):
         response = self.client.get(self.list_url)
-        routes = Route.objects.all()
+        routes = Route.objects.all().order_by("id")
 
         serializer = RouteListSerializer(routes, many=True)
 
@@ -530,7 +533,7 @@ class CrewApiTests(BaseCase):
 
     def test_crew_list_status_200_and_contains_value(self):
         response = self.client.get(self.list_url)
-        crews = Crew.objects.all()
+        crews = Crew.objects.all().order_by("id")
 
         serializer = CrewSerializer(crews, many=True)
 
@@ -859,7 +862,7 @@ class ExtraEntertainmentAndComfortApiTests(BaseCase):
 
     def test_extra_list_status_200_and_contains_value(self):
         response = self.client.get(self.list_url)
-        extra = ExtraEntertainmentAndComfort.objects.all()
+        extra = ExtraEntertainmentAndComfort.objects.all().order_by("id")
 
         serializer = ExtraEntertainmentAndComfortSerializer(extra, many=True)
 
