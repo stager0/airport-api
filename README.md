@@ -2,7 +2,7 @@
 
 A REST API for managing flights, bookings, and orders. Built with Django, Django REST Framework, Docker, and JWT authentication. Fully covered by tests and documented with Swagger (via **drf-spectacular**).
 
-![diagram airport.jpg](diagram%20airport.jpg)
+![diagram_final.jpg](diagram_final.jpg)
 ---
 
 ## Features
