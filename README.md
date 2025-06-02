@@ -55,6 +55,35 @@ A REST API for managing flights, bookings, and orders. Built with Django, Django
 
 ---
 
+###  Filtering
+
+The API supports filtering on various endpoints to help narrow down results:
+
+- **Meal Options**  
+  `price__lte`, `name__icontains`, `meal_type`
+
+- **Snacks and Drinks**, **Extra Entertainment and Comfort**  
+  `name__icontains`
+
+- **Airports**  
+  `name__icontains`, `closest_big_city__icontains`
+
+- **Crew**  
+  `first_name__icontains`, `last_name__icontains`, `position__icontains`
+
+- **Routes**  
+  `source__name__icontains`, `destination__name__icontains`,  
+  `source__closest_big_city__icontains`, `destination__closest_big_city__icontains`
+
+- **Flights**  
+  `route__source__closest_big_city__icontains`, `route__destination__closest_big_city__icontains`,  
+  `airplane__name__icontains`,  
+  `departure_time__gte`, `departure_time__lte`,  
+  `arrival_time__gte`
+
+For complete query options and parameter examples, see the Swagger documentation.
+
+
 ## How to run
 
 1. Clone the repo  
