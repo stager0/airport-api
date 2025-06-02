@@ -99,19 +99,28 @@ For complete query options and parameter examples, see the Swagger documentation
 - Start using the API!
 
 ## Tech stack
+
+- Python 3.13
+  
 - Django, Django REST Framework
-
+  
 - Django ORM
-
-- Docker
-
+  
+- PostgreSQL 15
+  
+- Docker, Docker Compose
+  
 - JWT Authentication
-
+  
 - Swagger via drf-spectacular
-
+- 
 - Django Debug Toolbar
-
-- Test using Django's build-in `TestCase` with coverage
+  
+- Pillow (for image handling)
+  
+- coverage (test metrics)
+  
+- Tests using Django's built-in `TestCase`
 
 
 ## api/doc/swagger
