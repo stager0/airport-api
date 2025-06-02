@@ -1,6 +1,6 @@
 # Airport API
 
-A REST API for managing flights, bookings, and orders. Built with Django, Django REST Framework, Docker, and JWT authentication. Fully covered by tests and documented with Swagger (via **drf-spectacular**).
+A REST API for managing flights, bookings, and orders. Built with Python, Django, Django REST Framework, Docker, and JWT authentication. Fully covered by tests and documented with Swagger (via **drf-spectacular**).
 
 ![diagram airport.jpg](diagram%20airport.jpg)
 ---
@@ -113,7 +113,7 @@ For complete query options and parameter examples, see the Swagger documentation
 - JWT Authentication
   
 - Swagger via drf-spectacular
-- 
+  
 - Django Debug Toolbar
   
 - Pillow (for image handling)
